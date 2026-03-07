@@ -1,10 +1,29 @@
 # Provenable.ai — Recursive Verifiable Guardrails for Agentic AI
 
-Structural security enforcement for agentic AI systems. This project provides
-the **AEGX v0.1** tamper-evident evidence bundle format and the **Agent Evidence
-& Recovery (AER)** runtime that together deliver provable integrity guarantees
-for agent sessions, tool invocations, file mutations, and control-plane
-changes.
+Structural security enforcement for agentic AI systems. This project provides a
+**unified Rust workspace** implementing four formal theorems (CPI, MI,
+Noninterference, RVU) as a cohesive, layered architecture with cross-surface
+threat correlation, tamper-evident audit chains, and automated rollback.
+
+**Current version: v0.2.0** — Unified 6-crate architecture integrating the AEGX
+evidence format, AER runtime guards, and cross-surface threat correlation into a
+single system grounded in first principles.
+
+---
+
+## Use as an Agent Skill
+
+> **Want to add provable security guardrails to your AI agent?**
+> This repo is ready to use as a skill on any agent platform.
+
+| File | Purpose | Platform |
+|------|---------|----------|
+| **[`SKILL.md`](SKILL.md)** | Skill manifest and command reference | OpenClaw, Claude Code, Manus, any platform reading `SKILL.md` |
+| **[`AGENT.md`](AGENT.md)** | Agent integration guide with architecture, trust model, and platform-specific setup | All agent platforms |
+
+**Quick start:** Clone this repo, run `cargo build --workspace --release`,
+then `aegx init`. Your agent reads `SKILL.md` to learn available commands
+and `AGENT.md` for integration context.
 
 ---
 
@@ -69,6 +88,74 @@ the unprotected system and found:
 
 ---
 
+## Unified Architecture (v0.2.0)
+
+The system is organized as a **6-crate Rust workspace** with strict layering.
+Each layer depends only on layers below it, ensuring clean separation of
+concerns while enabling deep integration:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                          aegx-cli                                │
+│  Unified CLI: init, snapshot, rollback, bundle, verify,          │
+│  report, prove, status                                           │
+├──────────────────────────────────────────────────────────────────┤
+│                        aegx-runtime                              │
+│  Snapshots (RVU), rollback policy with auto-rollback,            │
+│  integration hooks, workspace MI chokepoint, /prove query        │
+│  engine, sandbox auditing                                        │
+├──────────────────────────────────────────────────────────────────┤
+│                         aegx-guard                               │
+│  Policy engine (fail-closed), 8-category injection scanner,      │
+│  output leakage detection, file read guard, network egress       │
+│  monitor, skill verifier (ClawHavoc), cross-surface              │
+│  correlation, guard performance metrics                          │
+├──────────────────────────────────────────────────────────────────┤
+│                        aegx-bundle                               │
+│  Evidence bundle export/import, security-hardened zip,           │
+│  10-step verification, markdown/JSON reports                     │
+├──────────────────────────────────────────────────────────────────┤
+│                        aegx-records                              │
+│  Hash-linked audit chain, JSONL record I/O, auto blob            │
+│  promotion (>4KB), state directory management                    │
+├──────────────────────────────────────────────────────────────────┤
+│                         aegx-types                               │
+│  Foundation types, canonical JSON (AEGX_CANON_0_1), SHA-256      │
+│  record IDs, TaintFlags bitflags, Principal trust lattice,       │
+│  AegxError                                                       │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Dependency Graph
+
+```
+aegx-types       (no internal deps)
+    ↑
+aegx-records     (depends on: aegx-types)
+    ↑
+aegx-bundle      (depends on: aegx-types, aegx-records)
+    ↑
+aegx-guard       (depends on: aegx-types, aegx-records)
+    ↑
+aegx-runtime     (depends on: aegx-types, aegx-records, aegx-bundle, aegx-guard)
+    ↑
+aegx-cli         (depends on: all crates above)
+```
+
+### What Changed from the Previous Architecture
+
+The previous codebase consisted of three separate systems:
+
+| Previous | New | What Changed |
+|----------|-----|--------------|
+| `src/` (aegx crate) — bundle format, canonical hashing, verification | `aegx-types` + `aegx-records` + `aegx-bundle` | Decomposed into layered crates; canonical JSON with NFC normalization and 6-field record IDs are the authoritative implementation |
+| AER runtime guards, scanner, rollback, hooks | `aegx-guard` + `aegx-runtime` | Extracted into two crates; guard logic (policy, scanner, alerts) separated from runtime orchestration (hooks, snapshots, rollback) |
+| Two separate CLIs | Single `aegx` CLI | Unified entry point with all commands |
+| No cross-surface awareness | **Cross-surface threat correlation** | CPI denial → MI taint escalation; injection → session-wide taint; cross-surface denial counts feed RVU escalation |
+| Workspace writes bypassed hooks | **All writes route through hooks** | `workspace.rs` calls `hooks::on_file_write()` for full guard → record → audit → rollback pipeline |
+
+---
+
 ## What This System Delivers
 
 ### Outcome 1: Tamper-Evident Evidence Chains
@@ -80,12 +167,19 @@ SHA-256 hash of its canonical JSON representation. Records are linked by an
 any record immediately detectable by any verifier, offline, without trusting
 the producer.
 
+**Canonical JSON (`AEGX_CANON_0_1`):**
+- Keys sorted lexicographically at every level
+- Unicode NFC normalization on all string values
+- Negative zero (`-0.0`) normalized to `0`
+- No whitespace
+- 6-field record ID: `sha256(canonical_json({type, principal, taint, parents, meta, payload, schema}))`
+
 **Concrete guarantee:** Given a bundle, `aegx verify` performs 10-step
 end-to-end verification: schema validation, recordId recomputation, parent
 reference checking, blob hash verification, audit chain integrity, and
 manifest consistency. Any single bit flip anywhere in the bundle is caught.
 
-### Outcome 2: Control-Plane Integrity (CPI)
+### Outcome 2: Control-Plane Integrity (CPI Theorem)
 
 A **single-chokepoint guard** evaluates every control-plane mutation (skill
 install/enable/disable/update, tool registration, permission changes, gateway
@@ -95,12 +189,18 @@ All other principals — `WEB`, `SKILL`, `CHANNEL`, `EXTERNAL`, `TOOL_UNAUTH`,
 `TOOL_AUTH` — are structurally blocked regardless of what they claim in their
 content.
 
+**Cross-surface integration (v0.2.0):** A CPI denial for principal P
+automatically signals the cross-surface correlation engine, which elevates
+taint for subsequent MI writes by the same principal. An attacker who fails
+to modify config is automatically treated with heightened suspicion on
+memory writes.
+
 **Concrete guarantee:** Under assumptions A1-A3 (provenance completeness,
 principal accuracy, memory persistence), no untrusted input can alter the
 agent's control plane. Every allow/deny decision is recorded as
 tamper-evident evidence.
 
-### Outcome 3: Memory Integrity (MI)
+### Outcome 3: Memory Integrity (MI Theorem)
 
 A **single-chokepoint guard** protects all writes to durable workspace memory
 files (`SOUL.md`, `AGENTS.md`, `TOOLS.md`, `USER.md`, `IDENTITY.md`,
@@ -109,104 +209,118 @@ files (`SOUL.md`, `AGENTS.md`, `TOOLS.md`, `USER.md`, `IDENTITY.md`,
 - The requesting principal is untrusted (`WEB`, `SKILL`, `CHANNEL`, `EXTERNAL`)
 - The data has tainted provenance (`UNTRUSTED`, `INJECTION_SUSPECT`,
   `WEB_DERIVED`, `SKILL_OUTPUT`)
+- **Cross-surface taint (v0.2.0):** The principal was previously denied CPI access
+
+All workspace memory writes route through `hooks::on_file_write()`, which
+provides the complete pipeline: guard evaluation → record emission → audit
+chain append → rollback policy check → alert generation.
 
 **Concrete guarantee:** Persistent agent memory cannot be poisoned by
 untrusted inputs. Taint propagates conservatively — if any parent is tainted,
 all descendants are tainted.
 
-### Outcome 4: Verifiable Rollback (RVU)
+### Outcome 4: Noninterference (Conversation I/O)
+
+An **8-category prompt injection scanner** analyzes all inbound messages:
+
+| Category | What It Detects |
+|----------|----------------|
+| `SystemImpersonation` | Fake `[SYSTEM]`/`[ADMIN]` tags |
+| `IndirectInjection` | Hidden AI directives in documents |
+| `BehaviorManipulation` | Persona/instruction override attempts |
+| `FalseContextInjection` | Fabricated prior conversation context |
+| `EncodedPayload` | Base64/hex-encoded hidden instructions |
+| `ExtractionAttempt` | System prompt extraction attempts |
+| `ManyShotPriming` | Accumulated examples to override behavior |
+| `FormatOverride` | Output format manipulation for exfiltration |
+
+An **output leakage detector** scans outbound LLM responses for system prompt
+tokens (static watchlist + dynamic runtime discovery) and structural prompt
+patterns.
+
+**Cross-surface integration (v0.2.0):** Injection detected in a conversation
+session signals the correlation engine, which taints all subsequent operations
+in that session with `INJECTION_SUSPECT | UNTRUSTED` across all guard surfaces.
+
+### Outcome 5: Verifiable Rollback (RVU Theorem)
 
 Snapshots capture SHA-256 hashes of all files in scope (control-plane config,
 workspace memory, or both). Rollback restores files to their exact snapshotted
 content, verifies restoration via hash comparison, and emits a tamper-evident
-`Rollback` record. Contamination closure is computable: given a tainted record,
-the provenance DAG identifies all downstream records that must be invalidated.
+`Rollback` record.
 
-**Concrete guarantee:** After rollback, `verify_rollback()` confirms every
-file matches its snapshot hash exactly. The rollback itself is recorded as
-audit evidence.
-
-### Outcome 5: Supply-Chain Defense (ClawHavoc Prevention)
-
-A **pre-install skill verifier** scans skill packages before they enter the
-runtime, detecting all six ClawHavoc attack vectors. The `hooks::on_skill_install()`
-chokepoint ensures no skill is installed without verification, and every
-verification result is recorded as tamper-evident evidence.
-
-**Concrete guarantee:** `skill_verifier::verify_skill_package()` scans SKILL.md
-through the full 8-category input scanner plus 6 ClawHavoc-specific pattern
-detectors. Critical/High findings block installation; Medium findings require
-explicit user approval. 16 tests validate detection of all attack vectors with
-zero false positives on legitimate skills.
-
-### Outcome 6: Automated Recovery & Agent Notification (v0.1.4)
-
-Three automated rollback mechanisms ensure the system can detect, recommend,
-and execute recovery without manual intervention:
+Three automated recovery mechanisms:
 
 1. **Auto-Snapshot Before CPI Changes** — Every allowed control-plane mutation
-   (skill install, permission change, etc.) creates a pre-change snapshot
-   automatically, ensuring rollback is always possible.
+   creates a pre-change snapshot, ensuring rollback is always possible.
 2. **Rollback Recommendation** — When 3+ guard denials occur within 2 minutes,
-   the system emits a `RollbackRecommended` alert with the snapshot target and
-   CLI command. The agent relays this to the user.
+   the system emits a `RollbackRecommended` alert with the snapshot target.
 3. **Threshold-Based Auto-Rollback** — When 5+ denials occur within 2 minutes,
-   the system automatically rolls back to the most recent snapshot, emits a
-   `CRITICAL` alert, and the agent immediately notifies the user.
+   the system automatically rolls back and emits a `CRITICAL` alert.
 
-Additionally, **RVU contamination scope computation** traces the provenance
-DAG from any contaminated record to find all downstream records that may be
-affected, enabling targeted review or rollback.
+**Cross-surface integration (v0.2.0):** Rollback thresholds now use
+cross-surface denial counts. If CPI denies 2 requests and MI denies 3,
+the combined count of 5 triggers auto-rollback — even though no single
+surface reached the threshold alone. This catches coordinated attacks
+across surfaces.
 
-**Concrete guarantee:** The `/prove` endpoint includes `rollback_status` with
-`agent_messages` that the agent MUST relay to the user. Every auto-rollback
-and contamination event is recorded as tamper-evident evidence.
+**Contamination scope computation** traces the provenance DAG from any
+contaminated record using BFS to find all downstream records that must be
+invalidated.
 
-### Outcome 7: Self-Contained Portable Evidence
+### Outcome 6: Supply-Chain Defense (ClawHavoc Prevention)
 
-Bundles are self-contained directories (or `.aegx.zip` archives) containing
-everything needed for independent, offline verification. No network access, no
-trust in the producer, no special software beyond the verifier. Bundles can be
-shared, archived, and audited by any party.
+A **pre-install skill verifier** scans skill packages before they enter the
+runtime, detecting all six ClawHavoc attack vectors:
 
-### Outcome 8: Host Environment Hardening (v0.1.6)
+| ClawHavoc Vector | Defense | Severity |
+|------------------|---------|----------|
+| V1: `curl \| bash` social engineering | Shell execution pattern detection | CRITICAL |
+| V2: Reverse shell backdoors | Network socket pattern detection | CRITICAL |
+| V3: Credential exfiltration | Credential access + exfil patterns | HIGH |
+| V4: Memory poisoning | Memory file write detection | HIGH |
+| V5: Skill precedence exploit | Name collision detection | HIGH |
+| V6: Typosquatting | Levenshtein distance analysis | MEDIUM |
 
-Four new guard surfaces close the remaining gaps between AER's policy
-enforcement and host-level security:
+### Outcome 7: Host Environment Hardening
 
-1. **Dynamic Token Registry** — The `SystemPromptRegistry` singleton caches
-   system prompt tokens and activates runtime discovery in the output guard.
-   `config_with_runtime_discovery(system_prompt)` now receives the actual
-   prompt, catching SCREAMING_CASE, camelCase, and `${params.*}` tokens
-   dynamically. Backward compatible — callers passing `None` fall back to the
-   static watchlist.
-2. **File Read Guard** — `file_read_guard.rs` blocks untrusted principals from
-   reading sensitive files (`.env`, `*.pem`, `*.key`, `id_rsa*`, `credentials`).
-   Reads of files in `.aws/`, `.ssh/`, `.gnupg/` propagate `SECRET_RISK` taint.
-   Defense in depth: the scanner's `SensitiveFileContent` category catches
-   leaked credentials in tool output even if the hook is bypassed.
-3. **Network Egress Monitor** — `network_guard.rs` evaluates outbound requests
-   against domain allowlists/blocklists and payload size limits. Blocked by
-   default: `webhook.site`, `requestbin.com`, `pipedream.net`,
-   `canarytokens.com`, `interact.sh`, `burpcollaborator.net`. The scanner's
-   `DataExfiltration` category detects suspicious URL patterns.
-   `skill_verifier.rs` now detects hardcoded exfiltration URLs at install time.
-4. **Sandbox Audit** — `sandbox_audit.rs` verifies the OS execution environment
-   at session start: container detection (`/.dockerenv`, cgroup), seccomp
-   status, namespace isolation, read-only root, resource limits. Emits
-   `CRITICAL` alert if no sandboxing is detected. Records compliance level
-   (Full/Partial/None) as tamper-evident evidence.
+Four guard surfaces close the gap between policy enforcement and host-level security:
 
-**Concrete guarantee:** Every guard decision, file-read block, network denial,
-and sandbox audit result is recorded as tamper-evident evidence in the audit
-chain. The `/prove` endpoint surfaces all four new surfaces in protection
-reports and agent notifications.
+1. **File Read Guard** — Blocks untrusted principals from reading sensitive
+   files (`.env`, `*.pem`, `*.key`, `id_rsa*`, credentials). Propagates
+   `SECRET_RISK` taint for sensitive directory reads.
+2. **Network Egress Monitor** — Evaluates outbound requests against domain
+   allowlists/blocklists and payload size limits. Blocks known exfiltration
+   endpoints.
+3. **Sandbox Audit** — Verifies OS-level sandboxing (container, seccomp,
+   namespaces) at session start. Records compliance as tamper-evident evidence.
+4. **Dynamic Token Registry** — Caches system prompt tokens for runtime
+   discovery in the output guard.
+
+### Outcome 8: Unified /prove Query Interface
+
+The `/prove` command provides a queryable interface that pulls from all layers:
+
+```bash
+aegx prove                                    # Full protection report
+aegx prove --json                             # Machine-readable JSON
+aegx prove --category cpi --severity high     # Filter by category/severity
+aegx prove --since 2026-03-01T00:00:00Z       # Time-range queries
+```
+
+The response includes:
+- **Protection summary** — Total blocks, per-surface breakdown, severity distribution
+- **Threat alerts** — Filtered by time, category, severity, with limit
+- **Guard metrics** — Evaluations/sec, P50/P95/P99 latency, per-surface counters
+- **System health** — AER initialization, audit chain validity, record/alert counts
+- **Rollback status** — Auto-rollback history, active denial counts, agent messages
+- **Agent notifications** — Messages the agent MUST relay to the user (drained on read)
 
 ---
 
 ## Formal Foundations
 
-AER implements the structural guarantees from four published formal theorems:
+The system implements structural guarantees from four published formal theorems:
 
 - [Noninterference Theorem](https://github.com/Danielfoojunwei/Noninterference-theorem) — Taint-based isolation ensuring untrusted inputs cannot influence tool selection.
 - [Control-Plane Integrity Theorem](https://github.com/Danielfoojunwei/Control-plane-integrity-theorem-) — Under provenance completeness, principal accuracy, and memory persistence assumptions, no untrusted input alters the control plane.
@@ -234,46 +348,15 @@ theorem. The table below shows the exact mapping:
 | `ControlPlane`     | CPI Theorem           | `guard.check_control_plane()` — skill/tool/permission mutations |
 | `DurableMemory`    | MI Theorem            | `guard.check_memory_write()` — SOUL.md, AGENTS.md, etc. |
 | `ConversationIO`   | All four theorems     | `guard.check_conversation_input()` + `check_conversation_output()` |
-| `FileSystem`       | MI (read-side) + NI | `guard.check_file_read()` — sensitive file access control |
-| `NetworkIO`        | Noninterference + CPI | `guard.check_outbound_request()` — egress domain/payload evaluation |
-| `SandboxCompliance`| CPI + RVU             | `sandbox_audit.audit_environment()` — OS sandbox verification |
+| `FileSystem`       | MI (read-side) + NI   | `file_read_guard` — sensitive file access control |
+| `NetworkIO`        | Noninterference + CPI | `network_guard` — egress domain/payload evaluation |
+| `SandboxCompliance`| CPI + RVU             | `sandbox_audit` — OS sandbox verification |
 
-| Output Guard Layer          | Theorem                       | What It Catches                       |
-|-----------------------------|-------------------------------|---------------------------------------|
-| Token watchlist (static)    | MI (read-side)                | Internal tokens (SILENT_REPLY_TOKEN, HEARTBEAT_OK, etc.) |
-| Token watchlist (dynamic)   | MI Dynamic Discovery Corollary| Runtime-discovered SCREAMING_CASE, camelCase, `${params.*}` |
-| Structural patterns         | MI + CPI                      | Prompt structure disclosure (skill loading, reply tags, identity) |
-| Section heuristic           | MI                            | Multi-section prompt dumps (4+ section headers) |
-
-| Session-Level Defense           | Theorem Corollary               | What It Prevents                       |
-|---------------------------------|---------------------------------|----------------------------------------|
-| Conversation state tracker      | Conversational Noninterference  | Crescendo/multi-turn extraction across message sequences |
-| Canary injection escalation     | CPI Behavioral Constraint       | Forced-phrase injection denied for ALL principals |
-| Semantic intent detection       | Semantic Intent (Noninterference) | Novel extraction phrasings (verb + target regex matching) |
-
-| Supply-Chain Defense             | Theorem(s)                      | What It Prevents (ClawHavoc)            |
-|----------------------------------|---------------------------------|-----------------------------------------|
-| Pre-install skill verifier       | CPI + Noninterference           | Shell commands, reverse shells, credential theft, memory poisoning |
-| Name collision detection         | CPI                             | Skill precedence exploitation (V5)      |
-| Typosquatting detection          | CPI                             | Name similarity attacks (V6)            |
-| MI write guard at runtime        | MI Theorem                      | Memory poisoning blocked structurally — **V4 fully prevented** |
-
-| Automated Recovery (v0.1.4)        | Theorem(s)                      | What It Provides                        |
-|------------------------------------|---------------------------------|-----------------------------------------|
-| Auto-snapshot before CPI           | RVU Machine Unlearning          | Every CPI mutation has a rollback point |
-| Rollback recommendation (3+ denials) | RVU + All four theorems       | Agent alerts user with snapshot target and CLI command |
-| Auto-rollback (5+ denials)         | RVU Machine Unlearning          | Automatic recovery when attack burst detected |
-| Contamination scope computation    | RVU Machine Unlearning          | Transitive closure identifies all affected downstream records |
-| MI read-side taint tracking        | MI + Noninterference            | Untrusted readers get tainted provenance, preventing laundering |
-
-| Host Environment Hardening (v0.1.6)    | Theorem(s)                      | What It Provides                        |
-|----------------------------------------|---------------------------------|-----------------------------------------|
-| Dynamic Token Registry                 | MI Dynamic Discovery Corollary  | System prompt tokens cached → output guard catches runtime-specific leaks |
-| File Read Guard                        | MI (read-side) + Noninterference | Sensitive file reads blocked/tainted for untrusted principals |
-| Network Egress Monitor                 | Noninterference + CPI           | Outbound exfiltration blocked; skill verifier detects hardcoded exfil URLs |
-| Sandbox Audit                          | CPI + RVU                       | Environment trustworthiness verified and recorded as evidence |
-| SensitiveFileContent scanner           | MI + Noninterference            | Leaked credentials caught in tool output (defense in depth) |
-| DataExfiltration scanner               | Noninterference                 | Suspicious URL patterns in tool output detected |
+| Cross-Surface Correlation (v0.2.0) | Theorem(s)    | Mechanism |
+|-------------------------------------|---------------|-----------|
+| CPI denial → MI taint escalation    | CPI + MI      | `signal_cpi_denial()` adds UNTRUSTED to principal's MI evaluations |
+| Injection → session-wide taint      | NI + All      | `signal_injection_detected()` taints all surfaces for session |
+| Cross-surface denial count → RVU    | RVU + All     | `cross_surface_denial_count()` feeds rollback threshold |
 
 ---
 
@@ -281,207 +364,51 @@ theorem. The table below shows the exact mapping:
 
 We ran the exact ZeroLeaks attack taxonomy — 36 real attack payloads — against
 our ConversationIO guard using the actual scanner and output guard code.
-**No mocks, no simulations, no cherry-picking** (`packages/aer/tests/zeroleaks_benchmark.rs`).
+**No mocks, no simulations, no cherry-picking.**
 
 ### Results (Worst-Case: USER Principal, Input Scanner Only)
 
-| Metric                     | Before (No Guards) | v0.1.1 | v0.1.2 | v0.1.3 | v0.1.4 (Current) |
-|----------------------------|--------------------|--------|--------|--------|-------------------|
-| Extraction Success Rate    | 84.6% (11/13)      | 38.5%  | **15.4%** | 15.4% | **15.4% (2/13)**  |
-| Injection Success Rate     | 91.3% (21/23)      | 4.3%   | **4.3%**  | 4.3%  | **4.3% (1/23)**   |
-| **ZLSS (1-10, lower=better)** | **10/10**       | 2/10   | **1/10**  | 1/10  | **1/10**          |
-| **Security Score (0-100)** | **2/100**           | 79/100 | **90/100**| 90/100| **90/100**        |
-| Supply-chain (ClawHavoc)   | 0/6 vectors blocked | —      | —         | **6/6** | 6/6 detected    |
-| Automated recovery         | None               | —      | —         | —     | **Auto-rollback + contamination scope** |
-| MI read-side taint         | None               | —      | —         | —     | **Reader principal tracked** |
-| Total tests                | —                  | 114    | 152       | 168   | 176      |
-| **v0.1.6 (Current)** | | | | | |
-| File read guard        | None               | —      | —         | —     | **Sensitive reads blocked + tainted** |
-| Network egress monitor | None               | —      | —         | —     | **Domain blocklist + exfil detection** |
-| Sandbox audit          | None               | —      | —         | —     | **Container/seccomp/namespace verified** |
-| Dynamic token registry | None               | —      | —         | —     | **System prompt tokens cached at runtime** |
-| Total tests            | —                  | 114    | 152       | 168   | **278 pass**      |
-
-### Layer-by-Layer Breakdown
-
-**Layer 1 — Input Scanner (with Semantic Intent + Session State):**
-
-| Attack Type | Blocked | Suspicious (Tainted) | Clean (Passed) |
-|-------------|---------|---------------------|----------------|
-| Extraction (13 attacks) | 4 | 7 | 2 |
-| Injection (23 attacks) | 13 | 9 | 1 |
-
-**Layer 2 — Output Guard (with Dynamic Token Discovery):**
-
-| Metric | Result |
-|--------|--------|
-| Leaked response patterns caught | 11/11 (100%) |
-| False positives on clean responses | 0 |
-
-**Layer 3 — Policy Enforcement:**
-
-Suspicious verdicts carry taint flags that trigger policy denial:
-
-| Taint Flag | Policy Rule | Effect |
-|------------|-------------|--------|
-| `INJECTION_SUSPECT` | `cio-deny-injection` | Denied for **all** principals (including USER) |
-| `UNTRUSTED` | `cio-deny-untrusted-tainted` | Denied for WEB, SKILL, CHANNEL, EXTERNAL |
-
-With policy enforcement for untrusted principals (the actual threat model for
-Discord bots, web interfaces, and API integrations):
-- **Injection success drops to 4.3%** (1/23 — only a bare canary word passes)
-- **Extraction**: all tainted messages blocked; output guard catches the rest
-
-### Gaps Addressed in v0.1.2 (Four Corollaries)
-
-The jump from 79/100 to 90/100 came from four **corollaries** to the existing
-theorems — no new theorems were needed:
-
-| Gap (v0.1.1)          | Corollary                              | Theorem Basis          | Implementation |
-|-----------------------|----------------------------------------|------------------------|----------------|
-| Stateless scanner     | Conversational Noninterference         | Noninterference        | `conversation_state.rs` — session-level taint accumulation with crescendo detection |
-| Canary injection soft | CPI Behavioral Constraint              | CPI Theorem            | `scanner.rs` — canary injection escalated to `INJECTION_SUSPECT` taint |
-| Static watchlist      | MI Dynamic Token Discovery             | MI Theorem             | `output_guard.rs` — runtime extraction of SCREAMING_CASE, camelCase, `${params.*}` from actual system prompt |
-| Brittle patterns      | Semantic Intent Detection              | Noninterference        | `scanner.rs` — regex verb+target analysis catches novel phrasings ("walk me through your skill loading") |
-
-### Gaps Addressed in v0.1.3 (ClawHavoc Supply-Chain Defense)
-
-The ClawHavoc incident (341 malicious skills on ClawHub) exposed a supply-chain
-attack surface that runtime guards alone cannot address. v0.1.3 adds
-**pre-install skill verification**:
-
-| ClawHavoc Vector       | AER Defense                | Implementation |
-|------------------------|---------------------------|----------------|
-| V1: `curl \| bash` social engineering | Shell execution pattern detection | `skill_verifier.rs` — CRITICAL severity, blocks install |
-| V2: Reverse shell backdoors | Reverse shell pattern detection | Detects `/dev/tcp/`, `nc -e`, Python/Ruby/Perl sockets |
-| V3: Credential exfiltration | Credential access + exfiltration patterns | Detects `.clawdbot/.env`, `~/.ssh/`, API key references |
-| V4: Memory poisoning | Memory file write pattern detection | Detects `open('SOUL.md', 'w')`, write-to-protected-file patterns |
-| V5: Skill precedence exploit | Name collision detection | Case-insensitive match against existing skill registry |
-| V6: Typosquatting | Levenshtein distance analysis | Flags names within edit distance ≤ 2 of popular skills |
-
-See the full analysis: [ClawHub Integration & ClawHavoc Prevention](docs/clawhub-integration.md)
-
-### Gaps Addressed in v0.1.4 (Automated Recovery & Theorem Gap Closures)
-
-Six theorem execution gaps were identified and fixed:
-
-| Gap | Theorem | Fix |
-|-----|---------|-----|
-| No auto-snapshot before CPI changes | RVU | `auto_snapshot_before_cpi()` creates rollback point before every allowed CPI mutation |
-| No rollback recommendation on denial | RVU | `on_guard_denial()` emits `RollbackRecommended` alert at 3+ denials |
-| No threshold-based auto-rollback | RVU | Auto-rollback at 5+ denials in 120s, `CRITICAL` alert emitted |
-| No contamination scope computation | RVU | `compute_contamination_scope()` BFS on provenance DAG |
-| MI reads had clean provenance | MI/Noninterference | `read_memory_file()` tracks reader principal and applies taint |
-| Agent not notified of rollback events | All four | `/prove` includes `rollback_status.agent_messages` |
-
-### Gaps Addressed in v0.1.6 (Host Environment Hardening)
-
-Four implementation limitations identified in the architecture review have been
-addressed with new guard surfaces:
-
-| Limitation | Theorem | Fix |
-|-----------|---------|-----|
-| Output guard dynamic tokens never receive system prompt | MI Dynamic Discovery | `SystemPromptRegistry` singleton caches prompt; `on_system_prompt_available()` hook activates discovery |
-| No file-read guards for sensitive files | MI (read-side) + Noninterference | `FileReadGuard` with denied/tainted basename patterns; `on_file_read()` hook |
-| No outbound network monitoring | Noninterference + CPI | `NetworkGuard` with domain blocklist/allowlist; `on_outbound_request()` hook; skill verifier exfil URL detection |
-| No OS sandbox verification | CPI + RVU | `SandboxAudit` checks container/seccomp/namespace/readonly-root at session start; emits compliance evidence |
+| Metric                     | Before (No Guards) | v0.1.2 | v0.1.4 | v0.2.0 (Current) |
+|----------------------------|--------------------|--------|--------|-------------------|
+| Extraction Success Rate    | 84.6% (11/13)      | 15.4%  | 15.4%  | **15.4% (2/13)**  |
+| Injection Success Rate     | 91.3% (21/23)      | 4.3%   | 4.3%   | **4.3% (1/23)**   |
+| **ZLSS (1-10, lower=better)** | **10/10**       | 1/10   | 1/10   | **1/10**          |
+| **Security Score (0-100)** | **2/100**           | 90/100 | 90/100 | **90/100**        |
+| Supply-chain (ClawHavoc)   | 0/6 vectors blocked | 6/6    | 6/6    | **6/6 detected**  |
+| Cross-surface correlation  | None               | None   | None   | **CPI→MI, NI→All, RVU escalation** |
+| Automated recovery         | None               | None   | Auto   | **Auto + cross-surface** |
+| Total workspace tests      | —                  | 152    | 176    | **161 (unified crate)** |
 
 ### Remaining Honest Gaps
 
 1. **No LLM-based semantic understanding** — Regex intent detection only. Novel
    attack phrasings not matching verb+target patterns may bypass detection.
 2. **Benchmark tests individual messages** — Multi-turn session detection is
-   implemented in `guard.rs` but not exercised by the per-message benchmark.
+   implemented but not exercised by the per-message benchmark.
 3. **Adversarial prompt evolution** — Static regex patterns may be outpaced by
    adversarial prompt engineering research.
 4. **Output guard heuristic** — Section header detection may miss novel disclosure
    formats not matching the known header list.
 5. **No LLM in the loop** — Benchmark measures scanner/guard detection rates, not
-   whether the LLM would comply with the attack. Actual success rates depend on
-   model behavior.
-6. ~~No file-read guards~~ — **Addressed (v0.1.6):** `FileReadGuard` blocks/taints sensitive file reads. Scanner `SensitiveFileContent` category catches leaked credentials.
-7. ~~No outbound network monitoring~~ — **Addressed (v0.1.6):** `NetworkGuard` provides domain blocklist/allowlist. Full enforcement requires OS-level egress proxy.
-
-### How to Run the Benchmark
-
-```bash
-cd packages/aer
-cargo test zeroleaks_full_benchmark -- --nocapture
-```
+   whether the LLM would comply with the attack.
 
 ---
 
-## Security Hardening Status
+## Security Hardening
 
 All critical, high, and moderate security gaps identified during adversarial
-review have been resolved in the reference implementation.
+review have been resolved:
 
-### Resolved: ZIP Extraction Hardening
-
-**Files:** `src/bundle.rs`, `packages/aer/src/bundle.rs`
-
-Both `import_zip` (AEGX core) and `extract_bundle` (AER runtime) now enforce:
-
-- **Path traversal rejection** — Entry names are validated against `..`
-  components, absolute paths (Unix and Windows), and null bytes. Resolved
-  output paths are verified to remain within the target directory.
-- **Zip bomb protection** — Per-entry size limit (1 GB), total extraction
-  limit (10 GB), and maximum entry count (100,000).
-- **Symlink rejection** — Symlink zip entries are rejected. Output paths
-  that are existing symlinks on disk are also rejected (defense-in-depth).
-- **Duplicate entry rejection** — Entry names are tracked; duplicates are
-  rejected. The `zip` crate also enforces this at write time.
-- **UTF-8 enforcement** — Non-UTF-8 entry names (lossy conversion markers)
-  are rejected.
-
-Covered by integration tests in `tests/zip_security.rs`.
-
-### Resolved: Memory File Guard Bypass
-
-**File:** `packages/aer/src/hooks.rs`
-
-The memory file detection in `on_file_write` previously used string
-`ends_with` matching, which could be bypassed with crafted paths like
-`/tmp/not-actually-SOUL.md`. Now uses `Path::file_name()` for exact
-basename matching against the `MEMORY_FILES` whitelist.
-
-### Resolved: Policy File Integrity
-
-**File:** `packages/aer/src/policy.rs`
-
-Policy loading now enforces three layers of protection:
-
-1. **SHA-256 sidecar verification** — `save_policy` writes a `.sha256`
-   sidecar file. `load_policy` verifies the hash on load if the sidecar
-   exists. Tampering is detected and rejected.
-2. **Permission validation** — On Unix, world-writable policy files are
-   rejected (`chmod o-w` required).
-3. **Structural safety validation** — Loaded policies are checked for
-   structurally dangerous rules. Any rule that allows untrusted principals
-   (`WEB`, `SKILL`, `CHANNEL`, `EXTERNAL`) to modify the control plane
-   is rejected, even if the YAML parses correctly.
-
-### Resolved: `/tmp` Fallback Removed
-
-**File:** `packages/aer/src/config.rs`
-
-`resolve_state_dir()` no longer falls back to `/tmp` when `HOME` is unset.
-The process panics with a clear error message directing the operator to set
-`HOME`, `PRV_HOME`, or `PRV_STATE_DIR`.
-
-### Resolved: Guard Rate Limiting
-
-**File:** `packages/aer/src/guard.rs`
-
-Guard denial decisions are now rate-limited to 100 denials per 60-second
-window. Exceeding this limit returns an error, preventing log flooding
-attacks where a malicious agent spams denied requests to fill the audit log
-with noise.
+| Hardening | Implementation |
+|-----------|---------------|
+| ZIP extraction hardening | Path traversal rejection, zip bomb limits (1GB/entry, 10GB total, 100K entries), symlink rejection, duplicate entry rejection, UTF-8 enforcement |
+| Memory file guard bypass | `Path::file_name()` exact basename matching (not `ends_with`) |
+| Policy file integrity | SHA-256 sidecar verification + Unix permission check + structural safety validation |
+| `/tmp` fallback removed | Panics with clear message if HOME/PRV_HOME/PRV_STATE_DIR unset |
+| Guard rate limiting | 100 denials per 60-second window; prevents log flooding attacks |
+| Fail-closed policy | No matching rule → Deny (empty policy blocks everything) |
 
 ### Remaining Considerations
-
-These are architectural enhancements documented in `THREAT_MODEL.md` that
-require design decisions beyond the reference implementation scope:
 
 | Item | Status | Notes |
 |------|--------|-------|
@@ -492,48 +419,7 @@ require design decisions beyond the reference implementation scope:
 
 ---
 
-## What is AEGX?
-
-AEGX (Agent Evidence eXchange) is a content-addressed, append-only evidence
-format. Every action an agent takes is recorded as a **TypedRecord** whose
-identity is the SHA-256 hash of its canonical JSON representation. Records are
-linked together by an **audit hash chain** that makes any tampering —
-insertion, deletion, or modification — immediately detectable.
-
-Key properties:
-
-- **Tamper evidence.** Every record has a content-derived `recordId`. An
-  append-only hash chain links all records. Any modification breaks the chain.
-- **Deterministic canonicalization.** The `AEGX_CANON_0_1` algorithm (sorted
-  keys, NFC Unicode normalization, no whitespace, `-0` to `0`) ensures that
-  semantically identical JSON always produces identical bytes.
-- **Content-addressed blobs.** Large payloads are stored as files named by
-  their SHA-256 digest. Verification recomputes the hash of every blob.
-- **Schema-validated.** Manifest, records, and audit entries are validated
-  against strict JSON Schemas with `additionalProperties: false`.
-- **Self-contained bundles.** A bundle directory (or `.aegx.zip` archive)
-  contains everything needed for independent, offline verification.
-
-## Agent Evidence & Recovery (AER)
-
-AER is the runtime subsystem that enforces structural security:
-
-- **CPI (Control-Plane Integrity):** Prevents untrusted principals from
-  modifying skills, tools, permissions, or gateway configuration.
-- **MI (Memory Integrity):** Prevents tainted or untrusted writes to durable
-  workspace memory files.
-- **RVU Rollback:** Creates verifiable snapshots and performs exact-hash
-  rollback for control-plane state and workspace memory.
-- **Incident Bundle Export:** Exports self-contained `.aegx.zip` evidence
-  bundles with independent verification tooling.
-- **File Read Guard (v0.1.6):** Blocks untrusted reads of sensitive files
-  (`.env`, SSH keys, credentials) and taints reads from sensitive directories.
-- **Network Egress Monitor (v0.1.6):** Evaluates outbound requests against
-  domain blocklists/allowlists with payload size limits and exfiltration detection.
-- **Sandbox Audit (v0.1.6):** Verifies OS-level sandboxing (container, seccomp,
-  namespaces) at session start, recording compliance as tamper-evident evidence.
-
-### Trust Lattice
+## Trust Lattice
 
 Principals are assigned based on **transport channel**, not content claims.
 This prevents confused-deputy attacks.
@@ -547,7 +433,7 @@ SYS (trust level 5)
                      └── CHANNEL, EXTERNAL (trust level 0)
 ```
 
-### Taint Model
+## Taint Model
 
 Taint flags propagate conservatively (union of all parent taints):
 
@@ -573,7 +459,7 @@ Taint flags propagate conservatively (union of all parent taints):
 ### Build
 
 ```bash
-cargo build --locked --release
+cargo build --workspace --release
 ```
 
 The `aegx` binary is produced at `target/release/aegx`.
@@ -581,134 +467,150 @@ The `aegx` binary is produced at `target/release/aegx`.
 ### Run Tests
 
 ```bash
-cargo test --locked
+cargo test --workspace
 ```
 
-### Create a Bundle
+161 tests across 6 crates, including 11 integration tests validating the
+unified theorem pipeline (CPI enforcement, MI taint blocking, cross-surface
+correlation, audit chain integrity, canonical determinism, fail-closed policy,
+provenance chains, scanner detection, metrics tracking).
+
+### Initialize AEGX
 
 ```bash
-# Initialize a new empty bundle
-aegx init my-bundle
-
-# Add a record with an inline payload
-aegx add-record my-bundle \
-  --type SessionStart \
-  --principal USER \
-  --meta '{"ts":"2026-02-15T12:00:00Z"}' \
-  --inline '{}'
-
-# Add a blob file
-aegx add-blob my-bundle ./path/to/file.bin
-
-# Add a record referencing the blob
-aegx add-record my-bundle \
-  --type FileWrite \
-  --principal TOOL \
-  --meta '{"ts":"2026-02-15T12:00:01Z","path":"/workspace/file.bin"}' \
-  --blob <sha256-from-add-blob> \
-  --mime application/octet-stream \
-  --size 1024
+aegx init
 ```
 
-### Export and Verify
+Creates the state directory, installs the default policy, and sets up the
+workspace directory. Outputs a policy summary showing the default rules.
 
-```bash
-# Export to a zip archive
-aegx export my-bundle my-bundle.aegx.zip
+### CLI Reference
 
-# Verify bundle integrity (directory or zip)
-aegx verify my-bundle
-aegx verify my-bundle.aegx.zip
+| Command | Description |
+|---------|-------------|
+| `aegx init` | Initialize AEGX (state dirs, default policy, workspace) |
+| `aegx status` | Show initialization status, record/audit/snapshot counts, chain validity |
+| `aegx snapshot create <name> [--scope full\|cp\|mem]` | Create a named snapshot |
+| `aegx snapshot list` | List existing snapshots |
+| `aegx rollback <snapshot-id>` | Rollback to a previous snapshot with verification |
+| `aegx bundle export [--agent <id>] [--since <ts>]` | Export evidence bundle (.aegx.zip) |
+| `aegx verify <path.aegx.zip>` | Verify bundle integrity (10-step verification) |
+| `aegx report <path.aegx.zip>` | Generate human-readable report from bundle |
+| `aegx prove [--json] [--category <cat>] [--severity <sev>] [--since <ts>] [--until <ts>] [--limit <n>]` | Query protection status |
 
-# Summarize bundle contents
-aegx summarize my-bundle
+---
+
+## Crate Documentation
+
+### `aegx-types` — Foundation Types
+
+The lowest layer. Contains all shared types, canonical JSON implementation,
+and hashing primitives. No dependencies on other workspace crates.
+
+**Key modules:**
+- `canonical.rs` — `AEGX_CANON_0_1` deterministic JSON (sorted keys, NFC normalization, `-0.0`→`0`)
+- `principal.rs` — 8-variant `Principal` enum with trust lattice methods
+- `taint.rs` — `TaintFlags` bitflags with custom serde and string label conversion
+- `record.rs` — All shared types (`TypedRecord`, `RecordMeta`, `PolicyPack`, `PolicyRule`, `GuardVerdict`, `GuardSurface`, `SnapshotManifest`, `AuditEntry`, `BundleManifest`, `VerificationResult`, etc.)
+- `error.rs` — `AegxError` enum covering all error categories
+
+### `aegx-records` — Evidence Storage
+
+Hash-linked audit chain and JSONL record storage with auto blob promotion.
+
+**Key modules:**
+- `records.rs` — `create_record()` with 6-field `compute_record_id`, auto blob promotion (>4096 bytes), JSONL read/write, hash verification
+- `audit_chain.rs` — Append-only hash chain with genesis hash, `verify_entries()` with `ChainError` diagnostics
+- `config.rs` — State directory resolution (`PRV_STATE_DIR` → `PRV_HOME` → `~/.proven`), path functions, `MEMORY_FILES` whitelist
+
+### `aegx-bundle` — Evidence Bundles
+
+Self-contained, verifiable evidence packages.
+
+**Key modules:**
+- `bundle.rs` — `export_bundle()`, `extract_bundle()` (security-hardened), `import_zip()`, `export_dir_to_zip()`
+- `verify.rs` — `verify_bundle()` for extracted dirs, `verify_live()` for active state
+- `report.rs` — `generate_markdown_report()`, `generate_json_report()`
+
+### `aegx-guard` — Policy Engine & Guard Surfaces
+
+The security enforcement layer. All guard decisions flow through here.
+
+**Key modules:**
+- `guard.rs` — `Guard` struct with `check_control_plane()`, `check_memory_write()`, `check_conversation_input()`, `check_conversation_output()`; cross-surface correlation engine (`signal_cpi_denial()`, `signal_injection_detected()`, `correlated_taint_for_principal()`, `correlated_taint_for_session()`, `cross_surface_denial_count()`)
+- `policy.rs` — `load_policy()` with SHA-256 sidecar and permission checks, `default_policy()` with 8 rules, `evaluate()` with fail-closed semantics, `validate_policy_safety()`
+- `scanner.rs` — 8-category prompt injection/extraction scanner with conversation state tracking and crescendo detection
+- `output_guard.rs` — System prompt leakage detection with static + dynamic token discovery
+- `alerts.rs` — Threat alert system with 11 categories, JSONL persistence, agent notification queue
+- `metrics.rs` — `EvalTimer`, `GuardMetrics` with P50/P95/P99 latency tracking per surface
+- `file_read_guard.rs` — Sensitive file read access control
+- `network_guard.rs` — Outbound request domain/payload evaluation
+- `skill_verifier.rs` — ClawHavoc V1-V6 attack taxonomy scanner
+
+### `aegx-runtime` — Runtime Orchestration
+
+Connects guard decisions to system-level actions (snapshots, rollback, hooks).
+
+**Key modules:**
+- `hooks.rs` — Integration hooks for all operations (`on_tool_call`, `on_file_write`, `on_control_plane_change`, `on_message_input`, `on_message_output`, `on_skill_install`, etc.)
+- `snapshot.rs` — `create_snapshot()`, `list_snapshots()`, `load_snapshot()`, `diff_snapshot()`
+- `rollback_policy.rs` — RVU implementation with `DenialTracker`, auto-snapshot, contamination scope BFS, auto-rollback at threshold
+- `workspace.rs` — MI chokepoint routing through `hooks::on_file_write()`
+- `prove.rs` — `/prove` query engine pulling from alerts, metrics, audit chain, and health
+- `sandbox_audit.rs` — OS sandbox environment verification
+
+### `aegx-cli` — Unified CLI
+
+Single binary entry point connecting all layers.
+
+---
+
+## File Layout
+
 ```
-
-## CLI Reference
-
-| Command                          | Description                                      |
-|----------------------------------|--------------------------------------------------|
-| `aegx init <bundle-dir>`        | Initialize a new empty AEGX bundle directory.    |
-| `aegx add-blob <bundle> <file>` | Add a blob file to the bundle. Prints the SHA-256 hash. |
-| `aegx add-record <bundle> ...`  | Add a typed record. Prints the recordId.         |
-| `aegx export <dir> <zip>`       | Export a bundle directory to a `.aegx.zip` file. |
-| `aegx import <zip> <dir>`       | Extract a `.aegx.zip` into a directory.          |
-| `aegx verify <bundle>`          | Verify bundle integrity end-to-end.              |
-| `aegx summarize <bundle>`       | Print record counts by type/principal and verification status. |
-
-### AER CLI (packages/aer)
-
-The AER subsystem has its own CLI for runtime operations:
-
-```bash
-proven-aer init                           # Initialize AER
-proven-aer status                         # Show status
-proven-aer snapshot create <name>         # Create snapshot
-proven-aer snapshot list                  # List snapshots
-proven-aer rollback <snapshot-id>         # Rollback to snapshot
-proven-aer bundle export                  # Export evidence bundle
-proven-aer verify <path.aegx.zip>         # Verify bundle integrity
-proven-aer report <path.aegx.zip>         # Generate report
-```
-
-## Verification
-
-The `aegx verify` command performs a complete end-to-end verification:
-
-1. Validates `manifest.json` against the JSON schema.
-2. Validates every record in `records.jsonl` against the record schema.
-3. Validates every entry in `audit-log.jsonl` against the audit entry schema.
-4. Recomputes the `recordId` of every record and checks for mismatches.
-5. Validates all parent references (every parent must exist).
-6. Validates all blob references (file must exist, SHA-256 must match filename).
-7. Verifies the audit hash chain (sequential indices, prev-linking, entryHash recomputation).
-8. Checks `record_count`, `blob_count`, and `root_records` against actual data.
-
-Exit codes: `0` = pass, `2` = verification failure, `3` = schema failure,
-`4` = IO error.
-
-## Bundle Format
-
-An AEGX bundle is a directory (or zip) with this layout:
-
-```
-<bundle>/
-  manifest.json         # Bundle metadata and counters
-  records.jsonl         # TypedRecords, one per line
-  audit-log.jsonl       # Audit hash chain, one entry per line
-  blobs/                # Content-addressed blob store
-    <sha256-hex>
-    ...
-```
-
-See the full specification: [docs/SPEC.md](docs/SPEC.md)
-
-## Architecture
-
-```
-src/
-  lib.rs              # Library root
-  canonical.rs        # AEGX_CANON_0_1 deterministic JSON canonicalization
-  hash.rs             # SHA-256 hashing utilities
-  schema.rs           # JSON Schema loading and validation
-  records.rs          # TypedRecord types, recordId computation, JSONL I/O
-  audit.rs            # Audit hash chain: entryHash computation, chain verification
-  bundle.rs           # Bundle init, blob management, manifest, zip export/import
-  verify.rs           # End-to-end bundle verification and summarization
-  bin/aegx.rs         # CLI entry point
-schemas/
-  manifest.schema.json
-  record.schema.json
-  audit-entry.schema.json
-tests/
-  test_vectors/       # Pre-built bundles for regression testing
-packages/aer/         # Agent Evidence & Recovery runtime subsystem
-packages/aer/src/
-  system_prompt_registry.rs  # v0.1.6: SystemPromptRegistry for dynamic token discovery
-  file_read_guard.rs         # v0.1.6: Sensitive file read access control
-  network_guard.rs           # v0.1.6: Outbound network request monitoring
-  sandbox_audit.rs           # v0.1.6: OS sandbox environment verification
-fuzz/                 # Fuzz testing targets
+crates/
+  aegx-types/src/
+    lib.rs              # Re-exports all types and canonical functions
+    canonical.rs        # AEGX_CANON_0_1 deterministic JSON + SHA-256
+    principal.rs        # Principal trust lattice (8 variants)
+    taint.rs            # TaintFlags bitflags (8 flags)
+    record.rs           # All shared types (TypedRecord, PolicyPack, etc.)
+    error.rs            # AegxError enum
+  aegx-records/src/
+    lib.rs              # Records and audit chain management
+    records.rs          # JSONL record I/O with blob promotion
+    audit_chain.rs      # Hash-linked audit chain
+    config.rs           # State directory resolution
+  aegx-bundle/src/
+    lib.rs              # Bundle packaging and verification
+    bundle.rs           # Export/import with zip security
+    verify.rs           # 10-step bundle verification
+    report.rs           # Report generation
+  aegx-guard/src/
+    lib.rs              # Policy engine and guard surfaces
+    guard.rs            # Guard evaluation + cross-surface correlation
+    policy.rs           # Policy loading, evaluation, fail-closed
+    scanner.rs          # 8-category injection scanner
+    output_guard.rs     # Output leakage detection
+    alerts.rs           # Threat alert system
+    metrics.rs          # Guard performance metrics
+    file_read_guard.rs  # Sensitive file read guard
+    network_guard.rs    # Network egress monitor
+    skill_verifier.rs   # ClawHavoc skill scanner
+  aegx-runtime/src/
+    lib.rs              # Runtime orchestration
+    hooks.rs            # Integration hooks for all operations
+    snapshot.rs         # Snapshot management
+    rollback_policy.rs  # RVU rollback with auto-recovery
+    workspace.rs        # MI chokepoint (routes through hooks)
+    prove.rs            # /prove query engine
+    sandbox_audit.rs    # OS sandbox verification
+  aegx-runtime/tests/
+    unified_pipeline.rs # Integration tests for theorem pipeline
+  aegx-cli/src/
+    main.rs             # CLI entry point
+    cli.rs              # Command definitions and handlers
+docs/                   # Documentation
 ```
 
 ## Documentation
@@ -719,7 +621,7 @@ fuzz/                 # Fuzz testing targets
 |-------|----------|-------------|
 | [Installation Guide](docs/INSTALL.md) | Everyone | Prerequisites, build, install, platform notes |
 | [Quickstart Tutorial](docs/QUICKSTART.md) | Everyone | Create your first bundle in 5 minutes |
-| [CLI Reference](docs/CLI_REFERENCE.md) | Everyone | Every command, flag, and exit code for both CLIs |
+| [CLI Reference](docs/CLI_REFERENCE.md) | Everyone | Every command, flag, and exit code |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Everyone | Common errors and how to fix them |
 
 ### For Agent Developers
@@ -727,8 +629,6 @@ fuzz/                 # Fuzz testing targets
 | Guide | Description |
 |-------|-------------|
 | [Agent Integration Guide](docs/AGENT_INTEGRATION.md) | Step-by-step integration for AI agents and pipelines |
-| [AER Usage Guide](docs/aer-usage.md) | AER runtime operations (guards, snapshots, rollback) |
-| [CPI/MI Guard Rules](docs/aer-cpi-mi-rules.md) | Trust lattice, taint model, policy customization |
 | [ClawHub Integration](docs/clawhub-integration.md) | ClawHub marketplace integration & ClawHavoc prevention |
 
 ### Technical Reference
@@ -738,14 +638,13 @@ fuzz/                 # Fuzz testing targets
 | [AEGX v0.1 Format Specification](docs/SPEC.md) | Formal specification of the bundle format |
 | [Bundle Format Guide](docs/BUNDLE_FORMAT_GUIDE.md) | Visual walkthrough of every file in a bundle |
 | [Verification Guide](docs/VERIFICATION_GUIDE.md) | What verify checks and how to interpret results |
-| [AER Bundle Format](docs/aer-bundle-format.md) | AER-specific bundle extensions |
 
 ### Security
 
 | Document | Description |
 |----------|-------------|
 | [Threat Model](docs/THREAT_MODEL.md) | AEGX security analysis and mitigations |
-| [AER Threat Model](docs/aer-threat-model.md) | AER security guarantees and assumptions |
+| [ClawHub Integration](docs/clawhub-integration.md) | ClawHub marketplace & ClawHavoc prevention |
 | [Changelog](docs/CHANGELOG.md) | Release notes |
 
 ## License
