@@ -179,11 +179,3 @@ Copyright 2026 Daniel Foo Jun Wei / Provenable.ai.
 
 The **source code** in this repository is licensed under the MIT License — you may
 freely use, modify, and distribute it. See [LICENSE](LICENSE) for full terms.
-
-The **AEGX format specification** (`docs/SPEC.md`) is the original intellectual
-property of Daniel Foo Jun Wei / Provenable.ai and is provided for reference only.
-Creating independent or competing implementations of the AEGX format requires prior
-written permission. See [NOTICE](NOTICE) for details.
-
-"Provenable.ai", "Proven", "PRV", "AEGX", and "AER" are trademarks of
-Daniel Foo Jun Wei / Provenable.ai. For licensing inquiries: licensing@provenable.ai
