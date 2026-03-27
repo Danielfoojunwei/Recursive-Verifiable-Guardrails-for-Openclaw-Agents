@@ -8,6 +8,94 @@
 > **Skill definition:** See [`SKILL.md`](SKILL.md) for the skill manifest
 > and command reference.
 
+## Mandatory Intake Behavior for Conversion Work
+
+When this repository is used through `AGENT.md`, the agent must treat any
+**conversion, transformation, migration, rewrite, adaptation, repackaging,
+restructuring, or platform-porting request** as an intake-first engagement.
+The agent must **ask more questions up front, request every material input
+needed from the user, and avoid starting the conversion itself until the brief
+is sufficiently complete to achieve a high-quality result**.
+
+A request such as "convert this," "turn this into X," "port this to Y," or
+"make this production-ready" is not enough by itself for a highest-level
+conversion. The agent must stop, collect missing context, and only then begin
+planning or implementation.
+
+### Required Pre-Conversion Checklist
+
+Before performing conversion work, the agent must confirm or request all
+relevant details below and treat the checklist as a **required gate**. If any
+critical item is missing, the agent must stop and ask for it.
+
+| Checklist item | Information the agent must obtain | Required to proceed |
+|---|---|---|
+| **Source assets** | The exact files, repositories, URLs, prompts, screenshots, transcripts, specifications, and examples to be converted | **Yes** |
+| **Target state** | The desired output format, runtime, platform, framework, deployment target, or operating environment | **Yes** |
+| **Success standard** | What the user means by highest quality, production-ready, enterprise-ready, polished, accurate, or launch-ready | **Yes** |
+| **Audience and workflow** | Who will use the result, how they will use it, and what task the conversion must enable | **Yes** |
+| **Non-negotiables** | What must be preserved exactly, what may change, and what must never be altered | **Yes** |
+| **Design and voice** | Preferred tone, branding, structure, naming, conventions, formatting, and UX expectations | If relevant |
+| **Technical constraints** | APIs, schemas, dependencies, compatibility requirements, infrastructure, credentials, and security constraints | **Yes** for technical conversions |
+| **Reference standards** | Examples, benchmarks, competitors, prior versions, or inspiration that define the quality target | If available, otherwise explicitly note absence |
+| **Deliverables** | The exact files, formats, environments, tests, docs, and outputs the user expects | **Yes** |
+| **Acceptance criteria** | How the result will be reviewed, validated, approved, or deemed complete | **Yes** |
+
+### Explicit Stop Conditions
+
+The agent must **pause and ask questions instead of converting** if any of the
+following is true.
+
+1. The source material is missing, incomplete, or ambiguous.
+2. The target output is not precisely defined.
+3. The user has not defined what quality level or success looks like.
+4. The constraints, dependencies, or integrations are unclear.
+5. The deliverables or acceptance criteria are missing.
+6. The request uses vague phrases such as “convert this,” “make it better,” or
+   “do it at the highest level” without enough operational detail.
+7. The agent would otherwise need to invent assumptions that could materially
+   change the outcome.
+
+### Mandatory Agent Intake Rules
+
+1. The agent must **ask clarifying questions in a structured batch** whenever
+   the request is underspecified.
+2. The agent must **request every missing input that materially affects the
+   quality of the conversion**, including files, references, constraints, and
+   evaluation criteria.
+3. The agent must **not begin the actual conversion** until the required
+   checklist items are available, unless the user explicitly approves
+   assumptions.
+4. If assumptions are necessary, the agent must **state them explicitly, list
+   them, and ask the user to confirm them**.
+5. The agent must optimize for **completeness, correctness, and fit-for-use**,
+   not merely for speed.
+6. If the user requests the "best," "highest-level," or "most polished"
+   version, the agent must actively uncover hidden requirements instead of
+   inferring them silently.
+7. The agent should prefer a thorough intake round that gathers the full brief
+   before execution rather than starting early and correcting later.
+8. The agent must treat the intake checklist as a **hard precondition**, not a
+   suggestion.
+
+### Required Discovery Questions
+
+Before major conversion work, the agent should ask a grouped intake message
+covering at least the following:
+
+- What exactly is being converted?
+- What is the final target format, platform, or operating context?
+- Who is the end user or operator of the converted result?
+- What must stay unchanged, and what should be improved?
+- What references or examples define a successful outcome?
+- What technical or operational constraints must be respected?
+- What deliverables are expected at the end?
+- How will success be evaluated or approved?
+- What assumptions, if any, do you want the agent to avoid making?
+
+Only after this checklist is complete should the agent proceed to planning,
+implementation, testing, and delivery.
+
 ## What This Gives Your Agent
 
 Provenable adds **structural security enforcement** to any agentic AI system:

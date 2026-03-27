@@ -41,6 +41,40 @@ At runtime, AEGX uses a straightforward loop. First, the state directory is init
 | **Evidence store** | Records, audit chain entries, alerts, bundles, reports, and runtime metadata stored beneath the AEGX state root.[1] [5] |
 | **Platform adapters** | Shell wrappers that turn the generic runtime into a concrete operator workflow for a given agent environment.[3] [6] [7] [8] |
 
+## How Provenable Runs in the Background Even When It Is "Just a Skill"
+
+This is the key architectural distinction: **the skill is not the protection engine**. When a platform imports this repository through `SKILL.md` or `AGENT.md`, it is loading an **integration contract**, not a permanent in-memory guard process. The skill tells the host agent what Provenable is, when to invoke it, what commands matter, and how to respond to degraded or denied conditions. The actual background protection comes from the **runtime layer**, especially `aegx` and the long-running `aegxd` daemon.[2] [3] [5]
+
+In practical terms, the host platform uses the skill once to understand the operating contract and to bootstrap the right commands. After that, the adapter or operator starts `aegxd`, and that daemon stays alive in the background maintaining runtime state, IPC responsiveness, heartbeats, degraded-mode reasons, and persistent status snapshots. The host agent then makes point-in-time calls such as `aegx daemon status`, `aegx self-verify --active`, `aegx prove --json`, `aegx snapshot create`, or `aegx bundle export`, while the daemon continues running underneath.[3] [5] [6] [7] [8]
+
+> A callable skill explains **how to use Provenable**. The daemon and runtime are what actually keep Provenable **running in the background**.
+
+| Layer | What it is | What it does |
+|---|---|---|
+| **`SKILL.md`** | Skill-facing manifest and usage contract | Tells the host skill system which capability exists and how it should be invoked.[2] |
+| **`AGENT.md`** | Agent-facing operating guidance | Tells the host agent how to sequence checks, denials, snapshots, and escalation.[3] |
+| **Platform adapter** | Environment-specific wrapper script | Starts or reconnects to the runtime at task, turn, or session boundaries.[6] [7] [8] |
+| **`aegx` CLI** | Callable control surface | Gives the host agent explicit commands for init, daemon control, verification, proofs, bundles, and snapshots.[5] |
+| **`aegxd` daemon** | Long-running background process | Keeps live runtime state, IPC, heartbeats, and degraded-mode visibility active between individual skill calls.[5] |
+| **State and evidence store** | Persistent runtime data | Preserves alerts, records, audit-chain state, status snapshots, and exported evidence over time.[1] [5] |
+
+The simplest way to understand the model is to treat the skill as the **front door** and the daemon as the **always-on machine room behind it**. A host such as Manus, Claude Cowork / Claude Code, or OpenClaw does not need to keep reloading all logic from scratch for every protection check. Instead, it calls the skill or adapter to initialize the contract, starts the daemon if needed, and then continues interacting with the running background service through stable CLI commands and IPC-backed status checks.[6] [7] [8]
+
+### Background Execution Lifecycle
+
+A normal lifecycle looks like this. First, the platform loads the skill metadata and agent instructions. Second, the platform adapter initializes state paths and ensures the bundled or installed `aegx` binary is available. Third, it starts `aegxd` if no healthy daemon is already reachable. Fourth, the daemon publishes status and begins tracking heartbeats and degraded-state signals. Fifth, the host agent performs normal work, but before risky moments it makes targeted CLI calls into the live runtime. Finally, after incidents or checkpoints, the host exports evidence and, where appropriate, creates or restores snapshots.[3] [5] [6] [7] [8]
+
+| Stage | What happens | Why it matters |
+|---|---|---|
+| **1. Load skill** | The platform reads `SKILL.md` and `AGENT.md`. | The host agent learns the operating contract without hardcoding it.[2] [3] |
+| **2. Bootstrap runtime** | The adapter locates bundled binaries, runtime paths, and policy state. | The system becomes usable from either source or packaged bundle form.[4] [6] [7] [8] |
+| **3. Start background daemon** | `aegx daemon start` launches `aegxd` and waits for responsive IPC. | Protection is promoted from static files to a live runtime service.[5] |
+| **4. Maintain liveness** | Heartbeats and status snapshots are refreshed while work continues. | Operators can distinguish healthy coverage from stale or degraded coverage.[3] [5] |
+| **5. Perform guarded calls** | The agent calls `status`, `self-verify`, `prove`, snapshots, and bundles at specific moments. | Safety checks become deliberate workflow gates instead of assumptions.[5] [6] [7] [8] |
+| **6. Escalate or recover** | If degraded mode or a denial occurs, the workflow stops, escalates, or rolls back. | The system stays observable and recoverable under failure conditions.[3] [5] |
+
+This design is important because many agent platforms do not provide a native “background guardrail daemon” abstraction. Provenable supplies one by combining **callable skill semantics** with an **always-on runtime process**. The skill makes it discoverable and portable; the daemon makes it continuous and operational. That is why it can correctly be described as both **a skill you call** and **a guardrail system that runs in the background after activation**.
+
 ## Why This Is Useful Inside Agent Platforms
 
 The benefit of the hardened system is not only that it blocks bad operations. The more important benefit is that it gives each platform an explicit **operating contract**. Inside Manus, Claude Cowork / Claude Code, OpenClaw, and similar systems, safety failures often come from missing orchestration rather than missing theory. AEGX solves that by specifying when to initialize, when to heartbeat, when to verify, when to snapshot, when to stop, and what to export after an incident.[2] [5] [6] [7] [8]
@@ -52,6 +86,37 @@ The benefit of the hardened system is not only that it blocks bad operations. Th
 | “I need something distributable, not just source code.” | The skill bundle packages binaries, manifests, adapters, checksums, and documentation together.[4] [9] |
 | “I need evidence after a problem.” | `aegx bundle export`, bundle verification, and reports preserve post-incident traceability.[5] |
 | “I need to know when to halt risky work.” | Degraded-mode reporting turns partial protection into an explicit operational signal.[3] [5] [10] |
+
+## Canonical User-Information Intake Contract Across Agentic Harnesses
+
+The repository now treats **strict user-information collection as canonical behavior**, not an optional style preference. When Provenable is used through `SKILL.md`, `AGENT.md`, or any shipped platform adapter, the expected operating model is that the host agent must **ask for the missing information first, confirm the brief, and only then proceed with conversion or high-impact work**. This is important because many failures in agent systems do not come from raw model weakness; they come from incomplete requirements, silent assumptions, and unclear success criteria. Provenable therefore treats rigorous intake as part of safe operation, especially for Manus, Claude Cowork / Claude Code, OpenClaw, and related harnesses.[2] [3] [6] [7] [8]
+
+In practical terms, this means an operator should not have to worry that they forgot to mention a critical file, target platform, acceptance criterion, environment constraint, or non-negotiable rule. The canonical behavior of a Provenable-guided agent is to stop early, ask for every material input, batch the questions, and refuse to pretend the brief is complete when it is not. That intake discipline sits **above** the daemon and guardrail layer: the daemon keeps runtime protection alive, while the intake contract reduces execution errors caused by incomplete user context.[2] [3] [5]
+
+| Harness | Canonical intake expectation |
+|---|---|
+| **Manus** | Before substantive conversion or destructive work, the agent should ask for source material, target outcome, quality bar, constraints, deliverables, and approval criteria, then confirm the brief before execution.[3] [7] |
+| **Claude Cowork / Claude Code** | The agent should use `SKILL.md` and `AGENT.md` as a hard precondition for discovery, asking grouped clarifying questions and avoiding silent assumptions before implementation.[2] [3] [8] |
+| **OpenClaw** | The skill should be treated as intake-first: if the request is underspecified, the agent should request missing assets, references, and constraints before calling the conversion workflow complete.[2] [6] |
+| **Custom harnesses** | Any platform that adopts Provenable should treat strict intake as part of the operating contract, not a platform-specific convenience feature.[2] [3] |
+
+### What the Agent Must Collect Before High-Impact Work
+
+Before a major conversion, migration, rewrite, adaptation, packaging, or deployment-oriented task, the canonical agent behavior is to collect the full working brief from the user. At minimum, that includes the exact source assets, the target end state, the quality bar, the intended audience, the non-negotiables, the technical constraints, the required deliverables, and the acceptance criteria. If any of those are missing and would materially change the outcome, the agent should stop and ask instead of moving forward.[2] [3]
+
+| Required intake area | Why it is required |
+|---|---|
+| **Source assets** | Prevents the agent from converting the wrong files, versions, or artifacts. |
+| **Target outcome** | Prevents ambiguity about the final platform, format, or runtime. |
+| **Quality bar** | Prevents weak interpretations of phrases such as “highest level” or “production-ready.” |
+| **Audience and use case** | Prevents output that is technically correct but operationally wrong. |
+| **Preserve vs. change rules** | Prevents accidental removal of business-critical behavior or content. |
+| **Technical and operational constraints** | Prevents invalid architecture, deployment, security, or compatibility choices. |
+| **Deliverables and acceptance criteria** | Prevents disagreement about when the work is complete. |
+
+### Explicit Canonical Stop Rule
+
+If the request is vague, incomplete, or missing material information, the agent should **pause and ask**. It should not silently invent the missing brief. That rule is meant to hold consistently across all supported harnesses so that users can rely on the same high-standard intake posture whether they are operating through Manus, Claude Cowork / Claude Code, OpenClaw, or another shell-capable agent environment.[2] [3] [6] [7] [8]
 
 ## Quick Start from Source
 
