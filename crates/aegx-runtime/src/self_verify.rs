@@ -85,7 +85,9 @@ impl SelfVerificationReport {
 }
 
 pub fn run_self_verification(mode: SelfVerificationMode) -> io::Result<SelfVerificationReport> {
-    let _lock = SELF_VERIFY_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _lock = SELF_VERIFY_ENV_LOCK
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     run_self_verification_inner(mode)
 }
 
@@ -97,7 +99,8 @@ fn run_self_verification_inner(mode: SelfVerificationMode) -> io::Result<SelfVer
     let live_verification = if runtime_paths.aer_initialized {
         verify::verify_live()?
     } else {
-        warnings.push("AEGX is not initialized; live state verification could not run.".to_string());
+        warnings
+            .push("AEGX is not initialized; live state verification could not run.".to_string());
         invalid_verification(
             VerificationErrorKind::MalformedEntry,
             "AEGX is not initialized (no .aer directory found)",
@@ -183,7 +186,10 @@ pub fn format_self_verification_report(report: &SelfVerificationReport) -> Strin
     out.push_str("║        AEGX Live Self-Verification Report                  ║\n");
     out.push_str("╚══════════════════════════════════════════════════════════════╝\n\n");
 
-    out.push_str(&format!("Generated: {}\n", report.generated_at.to_rfc3339()));
+    out.push_str(&format!(
+        "Generated: {}\n",
+        report.generated_at.to_rfc3339()
+    ));
     out.push_str(&format!("Mode: {:?}\n", report.mode));
     out.push_str(&format!(
         "Overall Result: {}\n\n",
@@ -217,7 +223,10 @@ pub fn format_self_verification_report(report: &SelfVerificationReport) -> Strin
     ));
 
     out.push_str("\n── Runtime Presence ───────────────────────────────────────────\n\n");
-    out.push_str(&format!("  State Dir:           {}\n", report.runtime_paths.state_dir));
+    out.push_str(&format!(
+        "  State Dir:           {}\n",
+        report.runtime_paths.state_dir
+    ));
     out.push_str(&format!(
         "  Runtime Dir Exists:  {}\n",
         report.runtime_paths.runtime_dir_exists
@@ -285,7 +294,9 @@ fn read_daemon_status_snapshot(
 ) -> io::Result<Option<serde_json::Value>> {
     let path = config::daemon_status_file();
     if !path.exists() {
-        warnings.push("Daemon status snapshot is missing; the daemon may never have started.".to_string());
+        warnings.push(
+            "Daemon status snapshot is missing; the daemon may never have started.".to_string(),
+        );
         return Ok(None);
     }
 
@@ -560,7 +571,9 @@ mod tests {
 
     #[test]
     fn passive_self_verification_reports_uninitialized_state() {
-        let _lock = SELF_VERIFY_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _lock = SELF_VERIFY_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let temp = tempfile::tempdir().unwrap();
         std::env::set_var("PRV_STATE_DIR", temp.path());
         let report = run_self_verification_inner(SelfVerificationMode::Passive).unwrap();
@@ -571,7 +584,9 @@ mod tests {
 
     #[test]
     fn active_self_verification_passes_on_fresh_state() {
-        let _lock = SELF_VERIFY_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _lock = SELF_VERIFY_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let temp = tempfile::tempdir().unwrap();
         std::env::set_var("PRV_STATE_DIR", temp.path());
         config::ensure_aer_dirs().unwrap();
@@ -580,8 +595,14 @@ mod tests {
 
         let report = run_self_verification_inner(SelfVerificationMode::Active).unwrap();
         assert!(report.policy_loaded);
-        assert!(report.checks.iter().any(|c| c.name == "probe_control_plane_deny" && c.passed));
-        assert!(report.checks.iter().any(|c| c.name == "probe_isolated_evidence_verification" && c.passed));
+        assert!(report
+            .checks
+            .iter()
+            .any(|c| c.name == "probe_control_plane_deny" && c.passed));
+        assert!(report
+            .checks
+            .iter()
+            .any(|c| c.name == "probe_isolated_evidence_verification" && c.passed));
 
         std::env::remove_var("PRV_STATE_DIR");
     }

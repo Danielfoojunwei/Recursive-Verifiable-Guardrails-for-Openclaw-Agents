@@ -1,4 +1,8 @@
-use aegx_guard::alerts::{self, AlertSeverity, NotificationLevel, NotificationSource, ThreatCategory};
+#![cfg_attr(not(unix), allow(dead_code))]
+
+use aegx_guard::alerts::{
+    self, AlertSeverity, NotificationLevel, NotificationSource, ThreatCategory,
+};
 use aegx_records::{audit_chain, config, records};
 use aegx_runtime::{hooks, sandbox_audit};
 use aegx_types::{sha256_hex, Principal, RecordMeta, RecordType, TaintFlags, TypedRecord};
@@ -6,8 +10,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self};
+#[cfg(unix)]
+use std::io::{BufRead, BufReader, Write};
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -231,6 +239,26 @@ type SharedState = Arc<Mutex<RuntimeState>>;
 const HEARTBEAT_STALE_SECS: i64 = 300;
 const MAX_DEGRADED_REASONS: usize = 32;
 
+#[cfg(not(unix))]
+fn unsupported_daemon_error() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::Unsupported,
+        "aegxd is supported only on Unix-like platforms because it relies on authenticated Unix domain sockets",
+    )
+}
+
+#[cfg(unix)]
+fn set_restricted_permissions(path: &Path, mode: u32) -> io::Result<()> {
+    fs::set_permissions(path, fs::Permissions::from_mode(mode))
+}
+
+#[cfg(not(unix))]
+fn set_restricted_permissions(path: &Path, mode: u32) -> io::Result<()> {
+    let _ = (path, mode);
+    Ok(())
+}
+
+#[cfg(unix)]
 pub fn run_daemon() -> io::Result<()> {
     config::ensure_aer_dirs()?;
     secure_runtime_dir()?;
@@ -243,13 +271,13 @@ pub fn run_daemon() -> io::Result<()> {
     let auth_token = ensure_auth_token()?;
     let pid = std::process::id();
     fs::write(config::daemon_pid_file(), format!("{}\n", pid))?;
-    fs::set_permissions(config::daemon_pid_file(), fs::Permissions::from_mode(0o600))?;
+    set_restricted_permissions(&config::daemon_pid_file(), 0o600)?;
 
     let state = Arc::new(Mutex::new(RuntimeState::new()));
     bootstrap_sandbox_audit(&state)?;
 
     let listener = UnixListener::bind(&socket_path)?;
-    fs::set_permissions(&socket_path, fs::Permissions::from_mode(0o600))?;
+    set_restricted_permissions(&socket_path, 0o600)?;
     refresh_status_file(&state)?;
 
     let mut should_stop = false;
@@ -307,6 +335,11 @@ pub fn run_daemon() -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(not(unix))]
+pub fn run_daemon() -> io::Result<()> {
+    Err(unsupported_daemon_error())
+}
+
 pub fn read_status_file() -> io::Result<DaemonStatusSnapshot> {
     let content = fs::read_to_string(config::daemon_status_file())?;
     serde_json::from_str(&content).map_err(io_other)
@@ -317,11 +350,18 @@ pub fn read_auth_token() -> io::Result<String> {
     Ok(token.trim().to_string())
 }
 
+#[cfg(unix)]
 pub fn send_request(command: DaemonCommand) -> io::Result<DaemonResponse> {
     let token = read_auth_token()?;
     send_authenticated_request(command, &token)
 }
 
+#[cfg(not(unix))]
+pub fn send_request(_command: DaemonCommand) -> io::Result<DaemonResponse> {
+    Err(unsupported_daemon_error())
+}
+
+#[cfg(unix)]
 pub fn send_authenticated_request(
     command: DaemonCommand,
     token: &str,
@@ -343,6 +383,15 @@ pub fn send_authenticated_request(
     serde_json::from_str(line.trim_end()).map_err(io_other)
 }
 
+#[cfg(not(unix))]
+pub fn send_authenticated_request(
+    _command: DaemonCommand,
+    _token: &str,
+) -> io::Result<DaemonResponse> {
+    Err(unsupported_daemon_error())
+}
+
+#[cfg(unix)]
 fn handle_connection(
     stream: &mut UnixStream,
     auth_token: &str,
@@ -353,7 +402,11 @@ fn handle_connection(
         let mut reader = BufReader::new(stream.try_clone()?);
         let bytes_read = reader.read_line(&mut line)?;
         if bytes_read == 0 || line.trim().is_empty() {
-            note_bypass_attempt(state, "empty IPC request received on daemon socket", "daemon_socket");
+            note_bypass_attempt(
+                state,
+                "empty IPC request received on daemon socket",
+                "daemon_socket",
+            );
             let response = DaemonResponse {
                 ok: false,
                 message: "empty_request".to_string(),
@@ -716,10 +769,13 @@ fn execute_event(event: RuntimeEvent, state: &SharedState) -> io::Result<DaemonR
             session_id,
             content,
             parent_records,
-        } => match hooks::on_message_output(&agent_id, &session_id, &content, None, parent_records)? {
-            Ok(record) => allowed_record_response("message_output_allowed", true, record),
-            Err(record) => allowed_record_response("message_output_blocked", false, record),
-        },
+        } => {
+            match hooks::on_message_output(&agent_id, &session_id, &content, None, parent_records)?
+            {
+                Ok(record) => allowed_record_response("message_output_allowed", true, record),
+                Err(record) => allowed_record_response("message_output_blocked", false, record),
+            }
+        }
         RuntimeEvent::SystemPromptAvailable {
             agent_id,
             session_id,
@@ -822,6 +878,7 @@ fn allowed_record_response(message: &str, allowed: bool, record: TypedRecord) ->
     }
 }
 
+#[cfg(unix)]
 fn write_response(stream: &mut UnixStream, response: &DaemonResponse) -> io::Result<()> {
     let body = serde_json::to_string(response).map_err(io_other)?;
     stream.write_all(body.as_bytes())?;
@@ -994,6 +1051,7 @@ fn emit_runtime_signal(
     Ok(())
 }
 
+#[cfg(unix)]
 fn permissions_reason(path: &Path, label: &str, expected_mode: u32) -> Option<String> {
     match fs::metadata(path) {
         Ok(meta) => {
@@ -1009,6 +1067,11 @@ fn permissions_reason(path: &Path, label: &str, expected_mode: u32) -> Option<St
         }
         Err(e) => Some(format!("failed to inspect {label}: {e}")),
     }
+}
+
+#[cfg(not(unix))]
+fn permissions_reason(_path: &Path, _label: &str, _expected_mode: u32) -> Option<String> {
+    None
 }
 
 fn pid_file_reason(current_pid: u32) -> Option<String> {
@@ -1034,7 +1097,12 @@ fn auth_token_state() -> (bool, Option<String>) {
     let path = config::daemon_auth_token_file();
     let raw = match fs::read_to_string(&path) {
         Ok(raw) => raw,
-        Err(e) => return (false, Some(format!("failed to read daemon auth token: {e}"))),
+        Err(e) => {
+            return (
+                false,
+                Some(format!("failed to read daemon auth token: {e}")),
+            )
+        }
     };
     if raw.trim().is_empty() {
         (false, Some("daemon auth token file is empty".to_string()))
@@ -1048,7 +1116,12 @@ fn sync_degraded_signals(state: &SharedState, reasons: &[String]) {
         let mut guard = state.lock().unwrap_or_else(|e| e.into_inner());
         let new_reasons = reasons
             .iter()
-            .filter(|reason| !guard.reported_degraded_reasons.iter().any(|seen| seen == *reason))
+            .filter(|reason| {
+                !guard
+                    .reported_degraded_reasons
+                    .iter()
+                    .any(|seen| seen == *reason)
+            })
             .cloned()
             .collect::<Vec<_>>();
         guard.reported_degraded_reasons = reasons.to_vec();
@@ -1131,7 +1204,8 @@ fn build_status_snapshot(state: &SharedState) -> io::Result<DaemonStatusSnapshot
                 .unwrap_or_else(|| "audit chain verification failed".to_string()),
         );
     }
-    if let Some(reason) = permissions_reason(&config::runtime_dir(), "daemon runtime directory", 0o700)
+    if let Some(reason) =
+        permissions_reason(&config::runtime_dir(), "daemon runtime directory", 0o700)
     {
         push_unique_reason(&mut degraded_reasons, reason);
     }
@@ -1155,9 +1229,11 @@ fn build_status_snapshot(state: &SharedState) -> io::Result<DaemonStatusSnapshot
         push_unique_reason(&mut degraded_reasons, reason);
     }
     if auth_token_present {
-        if let Some(reason) =
-            permissions_reason(&config::daemon_auth_token_file(), "daemon auth token", 0o600)
-        {
+        if let Some(reason) = permissions_reason(
+            &config::daemon_auth_token_file(),
+            "daemon auth token",
+            0o600,
+        ) {
             push_unique_reason(&mut degraded_reasons, reason);
         }
     }
@@ -1237,14 +1313,14 @@ fn refresh_status_file(state: &SharedState) -> io::Result<()> {
     let path = config::daemon_status_file();
     let body = serde_json::to_string_pretty(&snapshot).map_err(io_other)?;
     fs::write(&path, body)?;
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+    set_restricted_permissions(&path, 0o600)?;
     Ok(())
 }
 
 fn secure_runtime_dir() -> io::Result<()> {
     let dir = config::runtime_dir();
     fs::create_dir_all(&dir)?;
-    fs::set_permissions(&dir, fs::Permissions::from_mode(0o700))?;
+    set_restricted_permissions(&dir, 0o700)?;
     Ok(())
 }
 
@@ -1257,12 +1333,12 @@ fn ensure_auth_token() -> io::Result<String> {
 
     let token = format!("aegxd-{}", Uuid::new_v4());
     fs::write(&path, format!("{}\n", token))?;
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+    set_restricted_permissions(&path, 0o600)?;
     Ok(token)
 }
 
 fn io_other<E: std::fmt::Display>(err: E) -> io::Error {
-    io::Error::new(io::ErrorKind::Other, err.to_string())
+    io::Error::other(err.to_string())
 }
 
 #[cfg(test)]

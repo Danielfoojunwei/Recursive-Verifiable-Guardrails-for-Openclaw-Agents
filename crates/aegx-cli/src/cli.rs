@@ -521,10 +521,7 @@ fn prove_run(
     Ok(())
 }
 
-fn self_verify_run(
-    active: bool,
-    json_output: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn self_verify_run(active: bool, json_output: bool) -> Result<(), Box<dyn std::error::Error>> {
     let mode = if active {
         aegx_runtime::SelfVerificationMode::Active
     } else {
@@ -605,7 +602,9 @@ fn daemon_status_command() -> Result<(), Box<dyn std::error::Error>> {
             print_daemon_status(&status);
         }
         Some((status, false)) => {
-            println!("Daemon is not currently reachable; showing the last persisted status snapshot.");
+            println!(
+                "Daemon is not currently reachable; showing the last persisted status snapshot."
+            );
             print_daemon_status(&status);
         }
         None => {

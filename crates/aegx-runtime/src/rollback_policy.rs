@@ -657,6 +657,8 @@ pub fn current_denial_count() -> u64 {
 mod tests {
     use super::*;
 
+    static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
+
     #[allow(dead_code)]
     fn test_decision() -> GuardDecisionDetail {
         GuardDecisionDetail {
@@ -671,6 +673,7 @@ mod tests {
 
     #[test]
     fn test_denial_tracker_basic() {
+        let _lock = TEST_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_tracker();
         let count =
             with_tracker(|t| t.record_denial(GuardSurface::ControlPlane, "test-rule", "record-1"));
@@ -683,6 +686,7 @@ mod tests {
 
     #[test]
     fn test_denial_tracker_prune() {
+        let _lock = TEST_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_tracker();
         // Add events — they are fresh so won't be pruned
         for i in 0..5 {
@@ -700,6 +704,7 @@ mod tests {
 
     #[test]
     fn test_auto_snapshot_cooldown() {
+        let _lock = TEST_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_tracker();
         assert!(with_tracker(|t| t.can_auto_snapshot()));
 

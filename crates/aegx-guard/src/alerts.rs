@@ -199,6 +199,7 @@ pub fn emit_proxy_alert(
 }
 
 /// Emit a custom system/runtime alert without requiring an existing guard decision.
+#[allow(clippy::too_many_arguments)]
 pub fn emit_custom_alert(
     category: ThreatCategory,
     severity: AlertSeverity,

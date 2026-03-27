@@ -165,10 +165,22 @@ mod tests {
         assert_eq!(records_dir(), PathBuf::from("/tmp/prv/.aer/records"));
         assert_eq!(audit_dir(), PathBuf::from("/tmp/prv/.aer/audit"));
         assert_eq!(runtime_dir(), PathBuf::from("/tmp/prv/.aer/runtime"));
-        assert_eq!(daemon_socket_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd.sock"));
-        assert_eq!(daemon_pid_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd.pid"));
-        assert_eq!(daemon_status_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd-status.json"));
-        assert_eq!(daemon_auth_token_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd.token"));
+        assert_eq!(
+            daemon_socket_file(),
+            PathBuf::from("/tmp/prv/.aer/runtime/aegxd.sock")
+        );
+        assert_eq!(
+            daemon_pid_file(),
+            PathBuf::from("/tmp/prv/.aer/runtime/aegxd.pid")
+        );
+        assert_eq!(
+            daemon_status_file(),
+            PathBuf::from("/tmp/prv/.aer/runtime/aegxd-status.json")
+        );
+        assert_eq!(
+            daemon_auth_token_file(),
+            PathBuf::from("/tmp/prv/.aer/runtime/aegxd.token")
+        );
         std::env::remove_var("PRV_STATE_DIR");
     }
 }
