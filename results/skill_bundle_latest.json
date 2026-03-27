@@ -1,0 +1,9 @@
+{
+  "bundle_name": "provenable-skill-readme-final",
+  "bundle_version": "readme-final",
+  "stage_dir": "/home/ubuntu/provenable/dist/provenable-skill-readme-final",
+  "archive_path": "/home/ubuntu/provenable/dist/provenable-skill-readme-final.tar.gz",
+  "archive_sha256": "334a77fd7c25516aeb69ad19a034ed22423ac05a4994d8d9162e3d505de45044",
+  "manifest_path": "/home/ubuntu/provenable/dist/provenable-skill-readme-final/skill-bundle-manifest.json",
+  "checksums_path": "/home/ubuntu/provenable/dist/provenable-skill-readme-final/checksums.txt"
+}

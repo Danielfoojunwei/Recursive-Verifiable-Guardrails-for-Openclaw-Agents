@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-03-27T07:56:29.580001+00:00",
+  "bundle_dir": "/home/ubuntu/provenable/dist/provenable-skill-readme-final",
+  "overall_ok": true,
+  "checks": [
+    {
+      "name": "required_paths_present",
+      "passed": true
+    },
+    {
+      "name": "checksums_verified",
+      "passed": true
+    },
+    {
+      "name": "manifest_schema_valid",
+      "passed": true
+    },
+    {
+      "name": "adapter_shell_syntax",
+      "passed": true
+    },
+    {
+      "name": "aegx_help_invocation",
+      "passed": true
+    },
+    {
+      "name": "aegx_daemon_help_invocation",
+      "passed": true
+    },
+    {
+      "name": "aegxd_executable_present",
+      "passed": true
+    },
+    {
+      "name": "openclaw_adapter_smoke_test",
+      "passed": true
+    },
+    {
+      "name": "manus_adapter_smoke_test",
+      "passed": true
+    },
+    {
+      "name": "claude_code_adapter_smoke_test",
+      "passed": true
+    }
+  ],
+  "manifest_summary": {
+    "bundle_name": "provenable-skill-readme-final",
+    "bundle_version": "readme-final",
+    "artifact_count": 31,
+    "entrypoints": {
+      "skill_manifest": "SKILL.md",
+      "agent_manifest": "AGENT.md",
+      "primary_cli": "bin/aegx",
+      "daemon_cli": "bin/aegxd",
+      "openclaw_adapter": "integrations/openclaw/openclaw_adapter.sh",
+      "manus_adapter": "integrations/manus/manus_adapter.sh",
+      "claude_code_adapter": "integrations/claude-code/claude_code_adapter.sh"
+    }
+  }
+}

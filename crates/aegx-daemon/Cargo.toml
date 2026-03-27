@@ -1,22 +1,24 @@
 [package]
-name = "aegx-cli"
+name = "aegx-daemon"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Unified CLI for AEGX/AER"
+description = "Always-on daemon and IPC layer for AEGX"
 
 [[bin]]
-name = "aegx"
+name = "aegxd"
 path = "src/main.rs"
 
 [dependencies]
 aegx-types = { workspace = true }
 aegx-records = { workspace = true }
-aegx-bundle = { workspace = true }
 aegx-guard = { workspace = true }
 aegx-runtime = { workspace = true }
-aegx-daemon = { workspace = true }
-clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
+uuid = { workspace = true }
+clap = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

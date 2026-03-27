@@ -1,9 +1,15 @@
-//! Unified CLI definition and handlers.
 //!
-//! Merges aegx's CLI (Init, AddBlob, AddRecord, Export, Import, Verify, Summarize)
-//! with aer's CLI (Init, Snapshot, Rollback, Bundle, Verify, Report, Prove, Status).
+//! Unified CLI for AEGX evidence workflows and AER runtime protection.
+//! Now includes first-class daemon management for the always-on `aegxd`
+//! service and its authenticated Unix-socket IPC layer.
 
+use aegx_daemon::{DaemonCommand, DaemonStatusSnapshot};
 use clap::{Parser, Subcommand};
+use std::io;
+use std::path::{Path, PathBuf};
+use std::process::{Command as ProcessCommand, Stdio};
+use std::thread;
+use std::time::Duration;
 
 #[derive(Parser)]
 #[command(name = "aegx")]
@@ -60,6 +66,18 @@ pub enum Commands {
     },
     /// Show AEGX status
     Status,
+    /// Run live self-verification against the active runtime, optionally with active guard probes
+    SelfVerify {
+        #[arg(long)]
+        active: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Manage the always-on aegxd daemon and authenticated IPC layer
+    Daemon {
+        #[command(subcommand)]
+        action: DaemonAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -82,6 +100,29 @@ pub enum BundleAction {
         agent: Option<String>,
         #[arg(long)]
         since: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum DaemonAction {
+    /// Run aegxd in the foreground
+    Run,
+    /// Start aegxd in the background and wait for the IPC socket to come online
+    Start,
+    /// Stop the running daemon via authenticated IPC
+    Stop,
+    /// Ping the daemon over the authenticated IPC socket
+    Ping,
+    /// Show live daemon status, or the last persisted status snapshot if unreachable
+    Status,
+    /// Reload the default guard policy inside the running daemon
+    ReloadPolicy,
+    /// Emit a daemon heartbeat record
+    Heartbeat {
+        #[arg(long, default_value = "cli")]
+        agent_id: String,
+        #[arg(long, default_value = "default")]
+        session_id: String,
     },
 }
 
@@ -119,6 +160,19 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             json,
         )?,
         Commands::Status => status()?,
+        Commands::SelfVerify { active, json } => self_verify_run(active, json)?,
+        Commands::Daemon { action } => match action {
+            DaemonAction::Run => daemon_run()?,
+            DaemonAction::Start => daemon_start()?,
+            DaemonAction::Stop => daemon_stop()?,
+            DaemonAction::Ping => daemon_ping()?,
+            DaemonAction::Status => daemon_status_command()?,
+            DaemonAction::ReloadPolicy => daemon_reload_policy()?,
+            DaemonAction::Heartbeat {
+                agent_id,
+                session_id,
+            } => daemon_heartbeat(&agent_id, &session_id)?,
+        },
     }
 
     Ok(())
@@ -158,6 +212,10 @@ fn init_run() -> Result<(), Box<dyn std::error::Error>> {
         "State directory: {}",
         aegx_records::resolve_state_dir().display()
     );
+    println!(
+        "Daemon runtime directory: {}",
+        aegx_records::config::runtime_dir().display()
+    );
 
     Ok(())
 }
@@ -189,6 +247,18 @@ fn status() -> Result<(), Box<dyn std::error::Error>> {
     match aegx_records::audit_chain::verify_chain()? {
         Ok(_) => println!("Audit chain: VALID"),
         Err(e) => println!("Audit chain: BROKEN — {e}"),
+    }
+
+    match daemon_status_with_fallback()? {
+        Some((status, true)) => {
+            println!("Daemon: RUNNING (live IPC)");
+            print_daemon_status(&status);
+        }
+        Some((status, false)) => {
+            println!("Daemon: UNREACHABLE (showing persisted status snapshot)");
+            print_daemon_status(&status);
+        }
+        None => println!("Daemon: not running"),
     }
 
     Ok(())
@@ -306,7 +376,7 @@ fn bundle_export(
 }
 
 fn bundle_verify(bundle_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let path = std::path::Path::new(bundle_path);
+    let path = Path::new(bundle_path);
     if !path.exists() {
         eprintln!("Bundle not found: {bundle_path}");
         return Err("Bundle not found".into());
@@ -340,7 +410,7 @@ fn bundle_verify(bundle_path: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn prove_report(bundle_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let path = std::path::Path::new(bundle_path);
+    let path = Path::new(bundle_path);
     if !path.exists() {
         eprintln!("Bundle not found: {bundle_path}");
         return Err("Bundle not found".into());
@@ -449,4 +519,180 @@ fn prove_run(
     }
 
     Ok(())
+}
+
+fn self_verify_run(
+    active: bool,
+    json_output: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mode = if active {
+        aegx_runtime::SelfVerificationMode::Active
+    } else {
+        aegx_runtime::SelfVerificationMode::Passive
+    };
+
+    let report = aegx_runtime::run_self_verification(mode)?;
+
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        print!("{}", aegx_runtime::format_self_verification_report(&report));
+    }
+
+    if !report.overall_ok {
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
+fn daemon_run() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Running aegxd in the foreground...");
+    aegx_daemon::run_daemon()?;
+    Ok(())
+}
+
+fn daemon_start() -> Result<(), Box<dyn std::error::Error>> {
+    if let Ok(response) = aegx_daemon::send_request(DaemonCommand::Ping) {
+        println!("Daemon already running: {}", response.message);
+        if let Some(status) = response.status {
+            print_daemon_status(&status);
+        }
+        return Ok(());
+    }
+
+    let daemon_bin = resolve_aegxd_binary()?;
+    let _child = ProcessCommand::new(&daemon_bin)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to launch {}: {e}", daemon_bin.display()))?;
+
+    for _ in 0..50 {
+        thread::sleep(Duration::from_millis(100));
+        if let Ok(response) = aegx_daemon::send_request(DaemonCommand::Ping) {
+            println!("Daemon started successfully.");
+            if let Some(status) = response.status {
+                print_daemon_status(&status);
+            }
+            return Ok(());
+        }
+    }
+
+    Err("Timed out waiting for aegxd to create a responsive IPC socket".into())
+}
+
+fn daemon_stop() -> Result<(), Box<dyn std::error::Error>> {
+    let response = aegx_daemon::send_request(DaemonCommand::Stop)?;
+    println!("{}", response.message);
+    Ok(())
+}
+
+fn daemon_ping() -> Result<(), Box<dyn std::error::Error>> {
+    let response = aegx_daemon::send_request(DaemonCommand::Ping)?;
+    println!("{}", response.message);
+    if let Some(status) = response.status {
+        print_daemon_status(&status);
+    }
+    Ok(())
+}
+
+fn daemon_status_command() -> Result<(), Box<dyn std::error::Error>> {
+    match daemon_status_with_fallback()? {
+        Some((status, true)) => {
+            println!("Daemon is reachable over authenticated IPC.");
+            print_daemon_status(&status);
+        }
+        Some((status, false)) => {
+            println!("Daemon is not currently reachable; showing the last persisted status snapshot.");
+            print_daemon_status(&status);
+        }
+        None => {
+            println!("No daemon status is available.");
+        }
+    }
+    Ok(())
+}
+
+fn daemon_reload_policy() -> Result<(), Box<dyn std::error::Error>> {
+    let response = aegx_daemon::send_request(DaemonCommand::ReloadPolicy)?;
+    println!("{}", response.message);
+    if let Some(status) = response.status {
+        print_daemon_status(&status);
+    }
+    if !response.ok {
+        return Err(response.message.into());
+    }
+    Ok(())
+}
+
+fn daemon_heartbeat(agent_id: &str, session_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let response = aegx_daemon::send_request(DaemonCommand::Heartbeat {
+        agent_id: agent_id.to_string(),
+        session_id: session_id.to_string(),
+    })?;
+    println!("{}", response.message);
+    if let Some(record_id) = response.record_id {
+        println!("Heartbeat record: {record_id}");
+    }
+    if let Some(status) = response.status {
+        print_daemon_status(&status);
+    }
+    Ok(())
+}
+
+fn daemon_status_with_fallback(
+) -> Result<Option<(DaemonStatusSnapshot, bool)>, Box<dyn std::error::Error>> {
+    match aegx_daemon::send_request(DaemonCommand::Status) {
+        Ok(response) => Ok(response.status.map(|status| (status, true))),
+        Err(_) => match aegx_daemon::read_status_file() {
+            Ok(status) => Ok(Some((status, false))),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(Box::new(e)),
+        },
+    }
+}
+
+fn print_daemon_status(status: &DaemonStatusSnapshot) {
+    println!("  PID: {}", status.pid);
+    println!("  Socket: {}", status.socket_path);
+    println!("  Started: {}", status.started_at.to_rfc3339());
+    println!("  Uptime seconds: {}", status.uptime_seconds);
+    println!("  Policy loaded: {}", status.policy_loaded);
+    println!("  Records: {}", status.record_count);
+    println!("  Alerts: {}", status.alert_count);
+    println!("  Audit chain valid: {}", status.audit_chain_valid);
+    println!("  Heartbeats: {}", status.heartbeat_count);
+    println!("  Events processed: {}", status.events_processed);
+    if let Some(ts) = status.last_request_at {
+        println!("  Last request: {}", ts.to_rfc3339());
+    }
+    if let Some(ts) = status.last_heartbeat_at {
+        println!("  Last heartbeat: {}", ts.to_rfc3339());
+    }
+    if let Some(ref audit) = status.sandbox_audit {
+        println!("  Sandbox compliance: {:?}", audit.compliance);
+    }
+    if let Some(ref err) = status.policy_error {
+        println!("  Policy error: {err}");
+    }
+    if let Some(ref err) = status.audit_chain_error {
+        println!("  Audit chain error: {err}");
+    }
+    if !status.degraded_reasons.is_empty() {
+        println!("  Degraded reasons:");
+        for reason in &status.degraded_reasons {
+            println!("    - {reason}");
+        }
+    }
+}
+
+fn resolve_aegxd_binary() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let current = std::env::current_exe()?;
+    let sibling = current.with_file_name("aegxd");
+    if sibling.exists() {
+        return Ok(sibling);
+    }
+    Ok(PathBuf::from("aegxd"))
 }

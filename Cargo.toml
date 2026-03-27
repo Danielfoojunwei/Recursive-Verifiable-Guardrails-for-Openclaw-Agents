@@ -7,6 +7,7 @@ members = [
     "crates/aegx-guard",
     "crates/aegx-runtime",
     "crates/aegx-cli",
+    "crates/aegx-daemon",
 ]
 
 # Shared dependency versions
@@ -35,6 +36,7 @@ aegx-bundle = { path = "crates/aegx-bundle" }
 aegx-guard = { path = "crates/aegx-guard" }
 aegx-runtime = { path = "crates/aegx-runtime" }
 aegx-cli = { path = "crates/aegx-cli" }
+aegx-daemon = { path = "crates/aegx-daemon" }
 
 [workspace.package]
 version = "0.2.0"

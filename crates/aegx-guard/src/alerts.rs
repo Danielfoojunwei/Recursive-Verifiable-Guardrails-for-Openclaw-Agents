@@ -60,6 +60,10 @@ pub enum ThreatCategory {
     AutoRollback,
     /// RVU contamination scope detected — downstream records affected.
     ContaminationDetected,
+    /// Attempt to bypass or tamper with the daemon control plane or IPC boundary.
+    DaemonBypassAttempt,
+    /// Daemon runtime is present but operating in degraded or tamper-suspect mode.
+    DaemonDegraded,
 }
 
 impl std::fmt::Display for ThreatCategory {
@@ -76,6 +80,8 @@ impl std::fmt::Display for ThreatCategory {
             ThreatCategory::RollbackRecommended => write!(f, "ROLLBACK_RECOMMENDED"),
             ThreatCategory::AutoRollback => write!(f, "AUTO_ROLLBACK"),
             ThreatCategory::ContaminationDetected => write!(f, "CONTAMINATION_DETECTED"),
+            ThreatCategory::DaemonBypassAttempt => write!(f, "DAEMON_BYPASS_ATTEMPT"),
+            ThreatCategory::DaemonDegraded => write!(f, "DAEMON_DEGRADED"),
         }
     }
 }
@@ -182,6 +188,44 @@ pub fn emit_proxy_alert(
         record_id: record_id.to_string(),
         target: format!("gateway.trustedProxies @ {}", gateway_addr),
         blocked: false,
+    };
+
+    let content = serde_json::to_string(&alert)?;
+    let alert_id = aegx_types::canonical::sha256_hex(content.as_bytes());
+    let alert = ThreatAlert { alert_id, ..alert };
+
+    append_alert(&alert)?;
+    Ok(alert)
+}
+
+/// Emit a custom system/runtime alert without requiring an existing guard decision.
+pub fn emit_custom_alert(
+    category: ThreatCategory,
+    severity: AlertSeverity,
+    summary: impl Into<String>,
+    principal: Principal,
+    taint: TaintFlags,
+    surface: Option<GuardSurface>,
+    rule_id: impl Into<String>,
+    record_id: &str,
+    target: impl Into<String>,
+    blocked: bool,
+) -> io::Result<ThreatAlert> {
+    ensure_alerts_dir()?;
+
+    let alert = ThreatAlert {
+        alert_id: String::new(),
+        timestamp: Utc::now(),
+        severity,
+        category,
+        summary: summary.into(),
+        principal,
+        taint,
+        surface,
+        rule_id: rule_id.into(),
+        record_id: record_id.to_string(),
+        target: target.into(),
+        blocked,
     };
 
     let content = serde_json::to_string(&alert)?;
@@ -309,6 +353,8 @@ fn classify_severity(category: ThreatCategory, decision: &GuardDecisionDetail) -
         ThreatCategory::RollbackRecommended => AlertSeverity::High,
         ThreatCategory::AutoRollback => AlertSeverity::Critical,
         ThreatCategory::ContaminationDetected => AlertSeverity::Critical,
+        ThreatCategory::DaemonBypassAttempt => AlertSeverity::Critical,
+        ThreatCategory::DaemonDegraded => AlertSeverity::High,
     }
 }
 
@@ -371,6 +417,16 @@ fn format_summary(
             "CONTAMINATION: Downstream records affected by compromised source '{}'. \
              RVU closure computation identified affected records for review.",
             target
+        ),
+        ThreatCategory::DaemonBypassAttempt => format!(
+            "CRITICAL: Daemon anti-bypass control triggered for '{}'. \
+             Rule '{}' flagged suspicious runtime or IPC activity. {}",
+            target, decision.rule_id, decision.rationale
+        ),
+        ThreatCategory::DaemonDegraded => format!(
+            "WARNING: Daemon entered degraded mode for '{}'. \
+             Rule '{}' reported: {}",
+            target, decision.rule_id, decision.rationale
         ),
     }
 }

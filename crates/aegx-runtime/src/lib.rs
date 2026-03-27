@@ -12,8 +12,13 @@ pub mod hooks;
 pub mod prove;
 pub mod rollback_policy;
 pub mod sandbox_audit;
+pub mod self_verify;
 pub mod snapshot;
 pub mod workspace;
 
+pub use self_verify::{
+    format_self_verification_report, run_self_verification, SelfVerificationMode,
+    SelfVerificationReport,
+};
 pub use snapshot::{create_snapshot, diff_snapshot, list_snapshots, load_snapshot};
 pub use workspace::{ensure_workspace, read_memory_file, write_memory_file};

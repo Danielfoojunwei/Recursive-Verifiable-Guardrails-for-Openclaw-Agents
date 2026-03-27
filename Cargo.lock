@@ -29,6 +29,7 @@ name = "aegx-cli"
 version = "0.2.0"
 dependencies = [
  "aegx-bundle",
+ "aegx-daemon",
  "aegx-guard",
  "aegx-records",
  "aegx-runtime",
@@ -37,6 +38,22 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "aegx-daemon"
+version = "0.2.0"
+dependencies = [
+ "aegx-guard",
+ "aegx-records",
+ "aegx-runtime",
+ "aegx-types",
+ "chrono",
+ "clap",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "uuid",
 ]
 
 [[package]]

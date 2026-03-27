@@ -1,0 +1,884 @@
+=== PHASE 5 VALIDATION MATRIX START ===
+UTC 2026-03-27T07:11:40Z
+
+--- 1. Full workspace tests ---
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test tests::auth_token_roundtrip ... ok
+test tests::status_file_roundtrip ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 102 tests
+test alerts::notification_tests::test_display_formats ... ok
+test alerts::notification_tests::test_convenience_cpi_allowed ... ok
+test alerts::notification_tests::test_convenience_output_blocked ... ok
+test alerts::notification_tests::test_convenience_cpi_denied ... ok
+test alerts::notification_tests::test_level_filtering ... ok
+test alerts::notification_tests::test_notify_and_drain ... ok
+test alerts::tests::test_classify_severity_cpi_external ... ok
+test alerts::notification_tests::test_notification_serialization ... ok
+test alerts::tests::test_classify_severity_mi_web ... ok
+test alerts::tests::test_classify_severity_cpi_injection ... ok
+test alerts::tests::test_format_summary_cpi ... ok
+test alerts::tests::test_severity_ordering ... ok
+test alerts::notification_tests::test_max_capacity ... ok
+test alerts::notification_tests::test_peek_does_not_drain ... ok
+test file_read_guard::tests::test_allow_env_file_for_user ... ok
+test file_read_guard::tests::test_deny_env_file_for_skill ... ok
+test file_read_guard::tests::test_deny_aws_credentials_for_skill ... ok
+test file_read_guard::tests::test_allow_normal_file_for_skill ... ok
+test file_read_guard::tests::test_clean_content_no_findings ... ok
+test file_read_guard::tests::test_custom_config ... ok
+test file_read_guard::tests::test_deny_ssh_key_for_web ... ok
+test file_read_guard::tests::test_detect_aws_key_in_content ... ok
+test file_read_guard::tests::test_taint_known_hosts ... ok
+test file_read_guard::tests::test_detect_private_key_in_content ... ok
+test network_guard::tests::test_allow_normal_request ... ok
+test file_read_guard::tests::test_env_prefix_matching ... ok
+test network_guard::tests::test_block_exfil_service ... ok
+test network_guard::tests::test_base64_in_url_detection ... ok
+test network_guard::tests::test_allowlist_enforcement ... ok
+test network_guard::tests::test_block_pastebin ... ok
+test network_guard::tests::test_blocklist_overrides_allowlist ... ok
+test network_guard::tests::test_extract_domain ... ok
+test network_guard::tests::test_get_request_ignores_payload_size ... ok
+test network_guard::tests::test_oversized_payload_allowed_for_user ... ok
+test network_guard::tests::test_oversized_payload_denied_for_skill ... ok
+test network_guard::tests::test_subdomain_matching ... ok
+test output_guard::registry_tests::test_clean_output_remains_clean ... ok
+test output_guard::tests::test_clean_output ... ok
+test output_guard::tests::test_custom_watchlist ... ok
+test output_guard::registry_tests::test_clear_resets_registry ... ok
+test output_guard::tests::test_detect_heartbeat_ok ... ok
+test output_guard::tests::test_detect_identity_leak ... ok
+test output_guard::tests::test_detect_internal_function_names ... ok
+test output_guard::tests::test_detect_multi_section_disclosure ... ok
+test output_guard::tests::test_detect_reply_tag_leak ... ok
+test output_guard::tests::test_detect_silent_reply_token ... ok
+test output_guard::tests::test_detect_structural_prompt_leak ... ok
+test output_guard::tests::test_detect_template_variable ... ok
+test output_guard::registry_tests::test_dynamic_tokens_catch_leakage ... ok
+test output_guard::tests::test_extract_screaming_case_tokens ... ok
+test output_guard::tests::test_extract_template_variables ... ok
+test output_guard::registry_tests::test_re_registration_replaces_config ... ok
+test output_guard::tests::test_skip_common_acronyms ... ok
+test output_guard::tests::test_extract_camel_case_functions ... ok
+test policy::tests::test_default_policy_allows_clean_user_memory ... ok
+test output_guard::tests::test_runtime_discovery_catches_novel_token ... ok
+test policy::tests::test_default_policy_allows_user_cpi ... ok
+test policy::tests::test_default_policy_denies_tainted_memory ... ok
+test output_guard::tests::test_runtime_discovery_clean_output_still_clean ... ok
+test policy::tests::test_default_policy_denies_web_cpi ... ok
+test policy::tests::test_validate_policy_safety_rejects_web_allow_cpi ... ok
+test output_guard::registry_tests::test_register_system_prompt ... ok
+test output_guard::registry_tests::test_register_tokens_only ... ok
+test policy::tests::test_load_rejects_tampered_policy ... ok
+test policy::tests::test_save_and_load_with_integrity_check ... ok
+test scanner::tests::test_compound_attack_blocks ... ok
+test scanner::tests::test_clean_input ... ok
+test scanner::tests::test_detect_admin_impersonation ... ok
+test scanner::conversation_tests::test_clean_conversation_no_crescendo ... ok
+test scanner::conversation_tests::test_sessions_are_isolated ... ok
+test scanner::tests::test_detect_extraction_direct ... ok
+test scanner::tests::test_detect_extraction_framing ... ok
+test scanner::tests::test_detect_base64_payload ... ok
+test scanner::tests::test_detect_canary_injection ... ok
+test scanner::tests::test_detect_false_context ... ok
+test scanner::tests::test_detect_false_memory ... ok
+test scanner::tests::test_detect_html_comment_injection ... ok
+test scanner::tests::test_detect_indirect_injection ... ok
+test scanner::conversation_tests::test_crescendo_extraction_then_internal_keywords ... ok
+test scanner::conversation_tests::test_sustained_extraction_over_multiple_turns ... ok
+test scanner::tests::test_detect_persona_injection ... ok
+test scanner::tests::test_detect_system_impersonation ... ok
+test scanner::tests::test_taint_flags_set_for_injection ... ok
+test scanner::tests::test_detect_yaml_priming ... ok
+test skill_verifier::tests::test_levenshtein_distance ... ok
+test scanner::tests::test_detect_many_shot_priming ... ok
+test scanner::tests::test_detect_format_override ... ok
+test skill_verifier::tests::test_sudo_command_detected ... ok
+test skill_verifier::tests::test_pip_install_in_skill_md ... ok
+test skill_verifier::tests::test_v1_curl_pipe_bash_detected ... ok
+test skill_verifier::tests::test_v2_reverse_shell_detected ... ok
+test skill_verifier::tests::test_clean_skill_passes ... ok
+test skill_verifier::tests::test_legitimate_skill_with_http_not_flagged ... ok
+test skill_verifier::tests::test_multiple_vectors_in_one_skill ... ok
+test skill_verifier::tests::test_v3_credential_access_detected ... ok
+test skill_verifier::tests::test_suspicious_network_endpoint ... ok
+test skill_verifier::tests::test_v5_case_insensitive_collision ... ok
+test skill_verifier::tests::test_v3_combined_exfiltration_critical ... ok
+test skill_verifier::tests::test_v5_name_collision_detected ... ok
+test skill_verifier::tests::test_v6_exact_match_not_flagged ... ok
+test skill_verifier::tests::test_v6_typosquatting_detected ... ok
+test skill_verifier::tests::test_v4_memory_poisoning_detected ... ok
+
+test result: ok. 102 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+
+running 6 tests
+test audit_chain::tests::test_verify_empty_chain ... ok
+test config::tests::test_state_dir_env_override ... ok
+test config::tests::test_aer_subpaths ... ok
+test audit_chain::tests::test_detect_tamper ... ok
+test audit_chain::tests::test_verify_chain_linkage ... ok
+test audit_chain::tests::test_verify_single_entry ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 21 tests
+test rollback_policy::tests::test_auto_snapshot_cooldown ... ok
+test prove::metrics_tests::test_metrics_recording ... ok
+test rollback_policy::tests::test_contamination_scope_empty ... ok
+test prove::metrics_tests::test_eval_timer ... ok
+test prove::metrics_tests::test_percentiles ... ok
+test prove::metrics_tests::test_recent_evaluations ... ok
+test rollback_policy::tests::test_rollback_summary_serialization ... ok
+test rollback_policy::tests::test_denial_policy_result_serialization ... ok
+test rollback_policy::tests::test_threshold_constants ... ok
+test rollback_policy::tests::test_denial_tracker_basic ... ok
+test rollback_policy::tests::test_contamination_scope_serialization ... ok
+test sandbox_audit::tests::test_compliance_computation_full ... ok
+test sandbox_audit::tests::test_compliance_computation_partial ... ok
+test rollback_policy::tests::test_denial_tracker_prune ... FAILED
+test sandbox_audit::tests::test_compliance_computation_none ... ok
+test sandbox_audit::tests::test_evaluate_profile_no_violations ... ok
+test sandbox_audit::tests::test_evaluate_profile_violations ... ok
+test sandbox_audit::tests::test_extract_limit_value ... ok
+test sandbox_audit::tests::test_audit_runs_without_crash ... ok
+test self_verify::tests::active_self_verification_passes_on_fresh_state ... ok
+test self_verify::tests::passive_self_verification_reports_uninitialized_state ... ok
+
+failures:
+
+---- rollback_policy::tests::test_denial_tracker_prune stdout ----
+
+thread 'rollback_policy::tests::test_denial_tracker_prune' (16686) panicked at crates/aegx-runtime/src/rollback_policy.rs:698:9:
+assertion `left == right` failed
+  left: 2
+ right: 5
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    rollback_policy::tests::test_denial_tracker_prune
+
+test result: FAILED. 20 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+--- 2. Fresh runtime init and active self-verification ---
+Initializing AEGX...
+  Created AEGX directories under /home/ubuntu/provenable/.phase5-state/.aer
+  Installed default policy: /home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml
+  Ensured workspace directory: /home/ubuntu/provenable/.phase5-state/workspace
+
+AEGX initialized successfully.
+
+Policy summary:
+  - CPI: deny control-plane changes from non-USER/SYS principals
+  - MI: deny memory writes with tainted provenance
+  - MI: deny memory writes from untrusted principals
+  - CIO: deny injection-suspected conversation messages
+  - All clean operations: allowed
+
+State directory: /home/ubuntu/provenable/.phase5-state
+Daemon runtime directory: /home/ubuntu/provenable/.phase5-state/.aer/runtime
+No daemon status is available.
+{
+  "generated_at": "2026-03-27T07:11:41.407223358Z",
+  "mode": "active",
+  "overall_ok": false,
+  "live_verification": {
+    "valid": true,
+    "record_count": 0,
+    "audit_entries_checked": 0,
+    "blobs_checked": 0,
+    "errors": []
+  },
+  "policy_loaded": true,
+  "policy_error": null,
+  "runtime_paths": {
+    "state_dir": "/home/ubuntu/provenable/.phase5-state",
+    "aer_initialized": true,
+    "policy_file": "/home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml",
+    "runtime_dir": "/home/ubuntu/provenable/.phase5-state/.aer/runtime",
+    "runtime_dir_exists": true,
+    "daemon_socket_present": false,
+    "daemon_pid_present": false,
+    "daemon_status_present": false,
+    "daemon_token_present": false
+  },
+  "checks": [
+    {
+      "name": "live_state_integrity",
+      "passed": true,
+      "details": "Verified 0 records, 0 audit entries, and 0 blobs in the active state."
+    },
+    {
+      "name": "policy_load",
+      "passed": true,
+      "details": "Default guard policy loaded successfully."
+    },
+    {
+      "name": "daemon_runtime_readiness",
+      "passed": false,
+      "details": "socket=false, pid=false, status=false, token=false"
+    },
+    {
+      "name": "probe_control_plane_deny",
+      "passed": true,
+      "details": "Denied as expected via record 80aabe3ef64909eff1cbed19c4afb62eb3b8970408075fd63bfdfad94af6d9f5."
+    },
+    {
+      "name": "probe_memory_write_deny",
+      "passed": true,
+      "details": "Denied as expected via record 157fe7e6746675f645d07a7cef58b53bb63445849c55166dc3c8dae150c4ecb3."
+    },
+    {
+      "name": "probe_message_input_deny",
+      "passed": true,
+      "details": "Blocked as expected via record 0abb6338ddbe5b80b17423506d38588d7dc677d7107239a79bef3b53d0813e96."
+    },
+    {
+      "name": "probe_file_read_deny",
+      "passed": true,
+      "details": "Denied as expected via record ba05eacfb6a8ac4ea83f7b6ca297744f2f598697d7907eb1a5d74f29ac2325a1."
+    },
+    {
+      "name": "probe_network_egress_deny",
+      "passed": true,
+      "details": "Denied as expected via record b237e149370486e5c82771565eb290e53f2fe719f60250a3d702fabdf556005a."
+    },
+    {
+      "name": "probe_sandbox_audit",
+      "passed": true,
+      "details": "Sandbox audit executed successfully with compliance Partial via record 7cb69981840a3719db50b2be91475d4a3890c119ab3beb683ae8cc2720b806e5."
+    },
+    {
+      "name": "probe_isolated_evidence_verification",
+      "passed": true,
+      "details": "Active probes produced a self-consistent audit state with 6 records."
+    }
+  ],
+  "warnings": [
+    "Daemon status snapshot is missing; the daemon may never have started."
+  ]
+}
+{
+  "version": "0.1.5",
+  "generated_at": "2026-03-27T07:11:41.591470832Z",
+  "protection": {
+    "total_threats_blocked": 0,
+    "cpi_violations_blocked": 0,
+    "mi_violations_blocked": 0,
+    "conversation_threats_blocked": 0,
+    "taint_blocks": 0,
+    "proxy_misconfigs_detected": 0,
+    "auto_rollbacks": 0,
+    "rollback_recommendations": 0,
+    "contamination_events": 0,
+    "skills_verified": 0,
+    "critical_alerts": 0,
+    "high_alerts": 0,
+    "medium_alerts": 0,
+    "by_category": {},
+    "by_principal": {},
+    "total_evaluations": 0,
+    "protection_rate": 0.0
+  },
+  "alerts": [],
+  "metrics": {
+    "control_plane_evals": [],
+    "memory_evals": [],
+    "conversation_evals": [],
+    "evals_per_sec": 0.0,
+    "avg_eval_us": 0,
+    "p50_eval_us": 0,
+    "p95_eval_us": 0,
+    "p99_eval_us": 0,
+    "max_eval_us": 0,
+    "uptime_secs": 0
+  },
+  "health": {
+    "aer_initialized": true,
+    "audit_chain_valid": true,
+    "record_count": 0,
+    "audit_entries": 0,
+    "alert_count": 0,
+    "state_dir": "/home/ubuntu/provenable/.phase5-state",
+    "warnings": []
+  }
+}
+
+--- 3. Multi-platform adapter smoke tests ---
+[aegx-adapter] Starting aegxd background daemon.
+[aegx-adapter] Running guard preflight checks.
+AEGX: initialized
+State directory: /home/ubuntu/provenable/.phase5-state
+AEGX root: /home/ubuntu/provenable/.phase5-state/.aer
+Records: 2
+Audit chain entries: 2
+Snapshots: 0
+Audit chain: VALID
+Daemon: RUNNING (live IPC)
+  PID: 16749
+  Socket: /home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock
+  Started: 2026-03-27T07:11:41.606251533+00:00
+  Uptime seconds: 0
+  Policy loaded: true
+  Records: 2
+  Alerts: 1
+  Audit chain valid: true
+  Heartbeats: 0
+  Events processed: 0
+  Last request: 2026-03-27T07:11:41.712099388+00:00
+  Sandbox compliance: Partial
+  Degraded reasons:
+    - sandbox compliance is Partial
+Daemon is reachable over authenticated IPC.
+  PID: 16749
+  Socket: /home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock
+  Started: 2026-03-27T07:11:41.606251533+00:00
+  Uptime seconds: 0
+  Policy loaded: true
+  Records: 2
+  Alerts: 1
+  Audit chain valid: true
+  Heartbeats: 0
+  Events processed: 0
+  Last request: 2026-03-27T07:11:41.714915350+00:00
+  Sandbox compliance: Partial
+  Degraded reasons:
+    - sandbox compliance is Partial
+{
+  "generated_at": "2026-03-27T07:11:41.718134153Z",
+  "mode": "passive",
+  "overall_ok": false,
+  "live_verification": {
+    "valid": true,
+    "record_count": 2,
+    "audit_entries_checked": 2,
+    "blobs_checked": 0,
+    "errors": []
+  },
+  "policy_loaded": true,
+  "policy_error": null,
+  "runtime_paths": {
+    "state_dir": "/home/ubuntu/provenable/.phase5-state",
+    "aer_initialized": true,
+    "policy_file": "/home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml",
+    "runtime_dir": "/home/ubuntu/provenable/.phase5-state/.aer/runtime",
+    "runtime_dir_exists": true,
+    "daemon_socket_present": true,
+    "daemon_pid_present": true,
+    "daemon_status_present": true,
+    "daemon_token_present": true
+  },
+  "daemon_status_snapshot": {
+    "alert_count": 1,
+    "audit_chain_error": null,
+    "audit_chain_valid": true,
+    "auth_token_present": true,
+    "bypass_attempt_count": 0,
+    "degraded_reasons": [
+      "sandbox compliance is Partial"
+    ],
+    "events_processed": 0,
+    "heartbeat_count": 0,
+    "heartbeat_stale": false,
+    "initialized": true,
+    "last_bypass_attempt_at": null,
+    "last_heartbeat_at": null,
+    "last_request_at": "2026-03-27T07:11:41.714915350Z",
+    "pid": 16749,
+    "policy_error": null,
+    "policy_file": "/home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml",
+    "policy_loaded": true,
+    "policy_sha256": "4a26adb8212194b1c81fe8e0976cb0cc964f1322c1a1924c853a1762743fcea0",
+    "record_count": 2,
+    "sandbox_audit": {
+      "compliance": "Partial",
+      "findings": [
+        {
+          "check": "dockerenv",
+          "detail": "/.dockerenv exists — Docker container detected",
+          "passed": true
+        },
+        {
+          "check": "seccomp",
+          "detail": "Seccomp mode: 0 (disabled)",
+          "passed": false
+        },
+        {
+          "check": "namespaces",
+          "detail": "No namespace isolation detected (all namespaces match init)",
+          "passed": false
+        },
+        {
+          "check": "readonly_root",
+          "detail": "Root filesystem is read-write (not hardened)",
+          "passed": false
+        },
+        {
+          "check": "resource_limits",
+          "detail": "Resource limits detected: {\"as\": \"unlimited\", \"nofile\": \"1024\", \"nproc\": \"15740\"}",
+          "passed": true
+        }
+      ],
+      "in_container": true,
+      "namespaces": [],
+      "readonly_root": false,
+      "resource_limits": {
+        "as": "unlimited",
+        "nofile": "1024",
+        "nproc": "15740"
+      },
+      "seccomp_active": false,
+      "seccomp_mode": "disabled"
+    },
+    "socket_path": "/home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock",
+    "started_at": "2026-03-27T07:11:41.606251533Z",
+    "status_version": "0.1",
+    "uptime_seconds": 0
+  },
+  "checks": [
+    {
+      "name": "live_state_integrity",
+      "passed": true,
+      "details": "Verified 2 records, 2 audit entries, and 0 blobs in the active state."
+    },
+    {
+      "name": "policy_load",
+      "passed": true,
+      "details": "Default guard policy loaded successfully."
+    },
+    {
+      "name": "daemon_runtime_readiness",
+      "passed": true,
+      "details": "socket=true, pid=true, status=true, token=true"
+    },
+    {
+      "name": "daemon_status_snapshot",
+      "passed": false,
+      "details": "policy_loaded=true, audit_chain_valid=true, degraded_reasons=1"
+    }
+  ],
+  "warnings": [
+    "Daemon reported degraded mode: sandbox compliance is Partial"
+  ]
+}
+[aegx-adapter] Running guard preflight checks.
+AEGX: initialized
+State directory: /home/ubuntu/provenable/.phase5-state
+AEGX root: /home/ubuntu/provenable/.phase5-state/.aer
+Records: 2
+Audit chain entries: 2
+Snapshots: 0
+Audit chain: VALID
+Daemon: RUNNING (live IPC)
+  PID: 16749
+  Socket: /home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock
+  Started: 2026-03-27T07:11:41.606251533+00:00
+  Uptime seconds: 0
+  Policy loaded: true
+  Records: 2
+  Alerts: 1
+  Audit chain valid: true
+  Heartbeats: 0
+  Events processed: 0
+  Last request: 2026-03-27T07:11:41.734509796+00:00
+  Sandbox compliance: Partial
+  Degraded reasons:
+    - sandbox compliance is Partial
+Daemon is reachable over authenticated IPC.
+  PID: 16749
+  Socket: /home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock
+  Started: 2026-03-27T07:11:41.606251533+00:00
+  Uptime seconds: 0
+  Policy loaded: true
+  Records: 2
+  Alerts: 1
+  Audit chain valid: true
+  Heartbeats: 0
+  Events processed: 0
+  Last request: 2026-03-27T07:11:41.737725030+00:00
+  Sandbox compliance: Partial
+  Degraded reasons:
+    - sandbox compliance is Partial
+{
+  "generated_at": "2026-03-27T07:11:41.741066738Z",
+  "mode": "passive",
+  "overall_ok": false,
+  "live_verification": {
+    "valid": true,
+    "record_count": 2,
+    "audit_entries_checked": 2,
+    "blobs_checked": 0,
+    "errors": []
+  },
+  "policy_loaded": true,
+  "policy_error": null,
+  "runtime_paths": {
+    "state_dir": "/home/ubuntu/provenable/.phase5-state",
+    "aer_initialized": true,
+    "policy_file": "/home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml",
+    "runtime_dir": "/home/ubuntu/provenable/.phase5-state/.aer/runtime",
+    "runtime_dir_exists": true,
+    "daemon_socket_present": true,
+    "daemon_pid_present": true,
+    "daemon_status_present": true,
+    "daemon_token_present": true
+  },
+  "daemon_status_snapshot": {
+    "alert_count": 1,
+    "audit_chain_error": null,
+    "audit_chain_valid": true,
+    "auth_token_present": true,
+    "bypass_attempt_count": 0,
+    "degraded_reasons": [
+      "sandbox compliance is Partial"
+    ],
+    "events_processed": 0,
+    "heartbeat_count": 0,
+    "heartbeat_stale": false,
+    "initialized": true,
+    "last_bypass_attempt_at": null,
+    "last_heartbeat_at": null,
+    "last_request_at": "2026-03-27T07:11:41.737725030Z",
+    "pid": 16749,
+    "policy_error": null,
+    "policy_file": "/home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml",
+    "policy_loaded": true,
+    "policy_sha256": "4a26adb8212194b1c81fe8e0976cb0cc964f1322c1a1924c853a1762743fcea0",
+    "record_count": 2,
+    "sandbox_audit": {
+      "compliance": "Partial",
+      "findings": [
+        {
+          "check": "dockerenv",
+          "detail": "/.dockerenv exists — Docker container detected",
+          "passed": true
+        },
+        {
+          "check": "seccomp",
+          "detail": "Seccomp mode: 0 (disabled)",
+          "passed": false
+        },
+        {
+          "check": "namespaces",
+          "detail": "No namespace isolation detected (all namespaces match init)",
+          "passed": false
+        },
+        {
+          "check": "readonly_root",
+          "detail": "Root filesystem is read-write (not hardened)",
+          "passed": false
+        },
+        {
+          "check": "resource_limits",
+          "detail": "Resource limits detected: {\"as\": \"unlimited\", \"nofile\": \"1024\", \"nproc\": \"15740\"}",
+          "passed": true
+        }
+      ],
+      "in_container": true,
+      "namespaces": [],
+      "readonly_root": false,
+      "resource_limits": {
+        "as": "unlimited",
+        "nofile": "1024",
+        "nproc": "15740"
+      },
+      "seccomp_active": false,
+      "seccomp_mode": "disabled"
+    },
+    "socket_path": "/home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock",
+    "started_at": "2026-03-27T07:11:41.606251533Z",
+    "status_version": "0.1",
+    "uptime_seconds": 0
+  },
+  "checks": [
+    {
+      "name": "live_state_integrity",
+      "passed": true,
+      "details": "Verified 2 records, 2 audit entries, and 0 blobs in the active state."
+    },
+    {
+      "name": "policy_load",
+      "passed": true,
+      "details": "Default guard policy loaded successfully."
+    },
+    {
+      "name": "daemon_runtime_readiness",
+      "passed": true,
+      "details": "socket=true, pid=true, status=true, token=true"
+    },
+    {
+      "name": "daemon_status_snapshot",
+      "passed": false,
+      "details": "policy_loaded=true, audit_chain_valid=true, degraded_reasons=1"
+    }
+  ],
+  "warnings": [
+    "Daemon reported degraded mode: sandbox compliance is Partial"
+  ]
+}
+[aegx-adapter] Running guard preflight checks.
+AEGX: initialized
+State directory: /home/ubuntu/provenable/.phase5-state
+AEGX root: /home/ubuntu/provenable/.phase5-state/.aer
+Records: 2
+Audit chain entries: 2
+Snapshots: 0
+Audit chain: VALID
+Daemon: RUNNING (live IPC)
+  PID: 16749
+  Socket: /home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock
+  Started: 2026-03-27T07:11:41.606251533+00:00
+  Uptime seconds: 0
+  Policy loaded: true
+  Records: 2
+  Alerts: 1
+  Audit chain valid: true
+  Heartbeats: 0
+  Events processed: 0
+  Last request: 2026-03-27T07:11:41.758329244+00:00
+  Sandbox compliance: Partial
+  Degraded reasons:
+    - sandbox compliance is Partial
+Daemon is reachable over authenticated IPC.
+  PID: 16749
+  Socket: /home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock
+  Started: 2026-03-27T07:11:41.606251533+00:00
+  Uptime seconds: 0
+  Policy loaded: true
+  Records: 2
+  Alerts: 1
+  Audit chain valid: true
+  Heartbeats: 0
+  Events processed: 0
+  Last request: 2026-03-27T07:11:41.761031089+00:00
+  Sandbox compliance: Partial
+  Degraded reasons:
+    - sandbox compliance is Partial
+{
+  "generated_at": "2026-03-27T07:11:41.764234578Z",
+  "mode": "passive",
+  "overall_ok": false,
+  "live_verification": {
+    "valid": true,
+    "record_count": 2,
+    "audit_entries_checked": 2,
+    "blobs_checked": 0,
+    "errors": []
+  },
+  "policy_loaded": true,
+  "policy_error": null,
+  "runtime_paths": {
+    "state_dir": "/home/ubuntu/provenable/.phase5-state",
+    "aer_initialized": true,
+    "policy_file": "/home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml",
+    "runtime_dir": "/home/ubuntu/provenable/.phase5-state/.aer/runtime",
+    "runtime_dir_exists": true,
+    "daemon_socket_present": true,
+    "daemon_pid_present": true,
+    "daemon_status_present": true,
+    "daemon_token_present": true
+  },
+  "daemon_status_snapshot": {
+    "alert_count": 1,
+    "audit_chain_error": null,
+    "audit_chain_valid": true,
+    "auth_token_present": true,
+    "bypass_attempt_count": 0,
+    "degraded_reasons": [
+      "sandbox compliance is Partial"
+    ],
+    "events_processed": 0,
+    "heartbeat_count": 0,
+    "heartbeat_stale": false,
+    "initialized": true,
+    "last_bypass_attempt_at": null,
+    "last_heartbeat_at": null,
+    "last_request_at": "2026-03-27T07:11:41.761031089Z",
+    "pid": 16749,
+    "policy_error": null,
+    "policy_file": "/home/ubuntu/provenable/.phase5-state/.aer/policy/default.yaml",
+    "policy_loaded": true,
+    "policy_sha256": "4a26adb8212194b1c81fe8e0976cb0cc964f1322c1a1924c853a1762743fcea0",
+    "record_count": 2,
+    "sandbox_audit": {
+      "compliance": "Partial",
+      "findings": [
+        {
+          "check": "dockerenv",
+          "detail": "/.dockerenv exists — Docker container detected",
+          "passed": true
+        },
+        {
+          "check": "seccomp",
+          "detail": "Seccomp mode: 0 (disabled)",
+          "passed": false
+        },
+        {
+          "check": "namespaces",
+          "detail": "No namespace isolation detected (all namespaces match init)",
+          "passed": false
+        },
+        {
+          "check": "readonly_root",
+          "detail": "Root filesystem is read-write (not hardened)",
+          "passed": false
+        },
+        {
+          "check": "resource_limits",
+          "detail": "Resource limits detected: {\"as\": \"unlimited\", \"nofile\": \"1024\", \"nproc\": \"15740\"}",
+          "passed": true
+        }
+      ],
+      "in_container": true,
+      "namespaces": [],
+      "readonly_root": false,
+      "resource_limits": {
+        "as": "unlimited",
+        "nofile": "1024",
+        "nproc": "15740"
+      },
+      "seccomp_active": false,
+      "seccomp_mode": "disabled"
+    },
+    "socket_path": "/home/ubuntu/provenable/.phase5-state/.aer/runtime/aegxd.sock",
+    "started_at": "2026-03-27T07:11:41.606251533Z",
+    "status_version": "0.1",
+    "uptime_seconds": 0
+  },
+  "checks": [
+    {
+      "name": "live_state_integrity",
+      "passed": true,
+      "details": "Verified 2 records, 2 audit entries, and 0 blobs in the active state."
+    },
+    {
+      "name": "policy_load",
+      "passed": true,
+      "details": "Default guard policy loaded successfully."
+    },
+    {
+      "name": "daemon_runtime_readiness",
+      "passed": true,
+      "details": "socket=true, pid=true, status=true, token=true"
+    },
+    {
+      "name": "daemon_status_snapshot",
+      "passed": false,
+      "details": "policy_loaded=true, audit_chain_valid=true, degraded_reasons=1"
+    }
+  ],
+  "warnings": [
+    "Daemon reported degraded mode: sandbox compliance is Partial"
+  ]
+}
+
+--- 4. Packaged skill bundle validation ---
+[package-skill] repo root: /home/ubuntu/provenable
+[package-skill] bundle name: provenable-skill-phase5
+[package-skill] building release workspace
+[package-skill] stage dir: /home/ubuntu/provenable/dist/provenable-skill-phase5
+[package-skill] archive: /home/ubuntu/provenable/dist/provenable-skill-phase5.tar.gz
+[package-skill] archive sha256: bee5afcde1b56fe14e16aadbe37aff92759f66e4df62d59e32aee76b673892d8
+[package-skill] summary: /home/ubuntu/provenable/results/skill_bundle_latest.json
+{
+  "generated_at": "2026-03-27T07:11:43.101591+00:00",
+  "bundle_dir": "/home/ubuntu/provenable/dist/provenable-skill-phase5",
+  "overall_ok": true,
+  "checks": [
+    {
+      "name": "required_paths_present",
+      "passed": true
+    },
+    {
+      "name": "checksums_verified",
+      "passed": true
+    },
+    {
+      "name": "manifest_schema_valid",
+      "passed": true
+    },
+    {
+      "name": "adapter_shell_syntax",
+      "passed": true
+    },
+    {
+      "name": "aegx_help_invocation",
+      "passed": true
+    },
+    {
+      "name": "aegx_daemon_help_invocation",
+      "passed": true
+    },
+    {
+      "name": "aegxd_executable_present",
+      "passed": true
+    }
+  ],
+  "manifest_summary": {
+    "bundle_name": "provenable-skill-phase5",
+    "bundle_version": "phase5",
+    "artifact_count": 31,
+    "entrypoints": {
+      "skill_manifest": "SKILL.md",
+      "agent_manifest": "AGENT.md",
+      "primary_cli": "bin/aegx",
+      "daemon_cli": "bin/aegxd",
+      "openclaw_adapter": "integrations/openclaw/openclaw_adapter.sh",
+      "manus_adapter": "integrations/manus/manus_adapter.sh",
+      "claude_code_adapter": "integrations/claude-code/claude_code_adapter.sh"
+    }
+  }
+}
+Validation summary written to /home/ubuntu/provenable/results/skill_bundle_validation_latest.json
+
+--- 5. Artifact inventory ---
+dist/provenable-skill-7255c31.tar.gz
+dist/provenable-skill-7255c31/AGENT.md
+dist/provenable-skill-7255c31/LICENSE
+dist/provenable-skill-7255c31/Makefile
+dist/provenable-skill-7255c31/NOTICE
+dist/provenable-skill-7255c31/README.md
+dist/provenable-skill-7255c31/SKILL.md
+dist/provenable-skill-7255c31/checksums.txt
+dist/provenable-skill-7255c31/skill-bundle-manifest.json
+dist/provenable-skill-phase5.tar.gz
+dist/provenable-skill-phase5/AGENT.md
+dist/provenable-skill-phase5/LICENSE
+dist/provenable-skill-phase5/Makefile
+dist/provenable-skill-phase5/NOTICE
+dist/provenable-skill-phase5/README.md
+dist/provenable-skill-phase5/SKILL.md
+dist/provenable-skill-phase5/checksums.txt
+dist/provenable-skill-phase5/skill-bundle-manifest.json
+results/phase5_validation_matrix.log
+results/skill_bundle_latest.json
+results/skill_bundle_validation_latest.json
+=== PHASE 5 VALIDATION MATRIX END ===

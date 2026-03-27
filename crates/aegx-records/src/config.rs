@@ -1,4 +1,3 @@
-//! State directory configuration and path resolution.
 //!
 //! Resolves the Provenable.ai state directory following precedence:
 //! 1. `PRV_STATE_DIR` env var
@@ -66,6 +65,31 @@ pub fn alerts_dir() -> PathBuf {
     aer_root().join("alerts")
 }
 
+/// Runtime state directory used by the always-on daemon and IPC layer.
+pub fn runtime_dir() -> PathBuf {
+    aer_root().join("runtime")
+}
+
+/// Path to the daemon Unix socket.
+pub fn daemon_socket_file() -> PathBuf {
+    runtime_dir().join("aegxd.sock")
+}
+
+/// Path to the daemon PID file.
+pub fn daemon_pid_file() -> PathBuf {
+    runtime_dir().join("aegxd.pid")
+}
+
+/// Path to the daemon status snapshot JSON file.
+pub fn daemon_status_file() -> PathBuf {
+    runtime_dir().join("aegxd-status.json")
+}
+
+/// Path to the daemon authentication token file.
+pub fn daemon_auth_token_file() -> PathBuf {
+    runtime_dir().join("aegxd.token")
+}
+
 /// Path to the records JSONL file.
 pub fn records_file() -> PathBuf {
     records_dir().join("records.jsonl")
@@ -109,6 +133,7 @@ pub fn ensure_aer_dirs() -> std::io::Result<()> {
         bundles_dir(),
         reports_dir(),
         alerts_dir(),
+        runtime_dir(),
     ] {
         std::fs::create_dir_all(dir)?;
     }
@@ -139,6 +164,11 @@ mod tests {
         assert_eq!(policy_dir(), PathBuf::from("/tmp/prv/.aer/policy"));
         assert_eq!(records_dir(), PathBuf::from("/tmp/prv/.aer/records"));
         assert_eq!(audit_dir(), PathBuf::from("/tmp/prv/.aer/audit"));
+        assert_eq!(runtime_dir(), PathBuf::from("/tmp/prv/.aer/runtime"));
+        assert_eq!(daemon_socket_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd.sock"));
+        assert_eq!(daemon_pid_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd.pid"));
+        assert_eq!(daemon_status_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd-status.json"));
+        assert_eq!(daemon_auth_token_file(), PathBuf::from("/tmp/prv/.aer/runtime/aegxd.token"));
         std::env::remove_var("PRV_STATE_DIR");
     }
 }
