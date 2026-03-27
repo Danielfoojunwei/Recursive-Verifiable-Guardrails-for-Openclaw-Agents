@@ -27,7 +27,30 @@ AEGX enforces a layered operating model. It protects **control-plane integrity**
 | **Evidence export** | Bundles can be exported after incidents for later verification and reporting.[5] [6] [7] [8] |
 | **Degraded-mode visibility** | The system explicitly surfaces daemon absence, stale heartbeats, policy problems, and sandbox-compliance caveats instead of hiding them.[5] [10] |
 
+## Collated Outcomes
+
+The hardened system now has a set of concrete outcomes that can be stated plainly. The table below collates those outcomes as one-line operational results so operators, buyers, and integrators can quickly understand what Provenable changes in practice.[1] [3] [5] [6] [7] [8] [9] [10]
+
+| Outcome area | One-line result |
+|---|---|
+| **Background protection** | Provenable keeps protection state live in the background through `aegxd` instead of relying on static policy files alone.[3] [5] |
+| **Operator visibility** | Operators can immediately see whether protection is healthy, stale, unreachable, or degraded before continuing risky work.[3] [5] [10] |
+| **Live readiness checking** | `aegx self-verify` confirms whether guard enforcement is still functioning before high-impact actions proceed.[1] [5] |
+| **Safer destructive actions** | Snapshots create rollback points before refactors, skill installs, and other destructive mutations.[5] [6] [7] [8] |
+| **Post-incident accountability** | Evidence bundles preserve tamper-evident records that can be exported, reviewed, and verified after failures or incidents.[1] [5] |
+| **Control-plane hardening** | Unsafe changes to tools, skills, and permissions are routed through guarded control paths rather than trusted implicitly.[1] |
+| **Data-exposure reduction** | Sensitive file reads and unsafe network egress can be evaluated and denied before data leaves the guarded environment.[1] |
+| **Prompt and memory safety** | Suspicious inputs and tainted memory writes can be stopped before they become durable trusted state.[1] |
+| **Manus task safety** | Manus workflows gain a repeatable pattern of bootstrap, heartbeat, verify, act, observe, and export.[7] |
+| **Claude coding safety** | Claude Cowork / Claude Code sessions gain pre-refactor checks, live daemon monitoring, and evidence-backed recovery paths.[8] |
+| **OpenClaw skill governance** | OpenClaw skill installation becomes an explicit gated trust event with snapshots and verification-aware control points.[6] |
+| **Portable deployment** | The full system can be shipped as a reusable skill bundle with binaries, manifests, adapters, checksums, and documentation.[4] [9] |
+| **Packaged usability** | Bundled OpenClaw, Manus, and Claude adapter smoke tests passed from inside the packaged system itself.[9] |
+| **Canonical intake discipline** | Supported harnesses are instructed to stop and ask for missing user information instead of guessing and proceeding blindly.[2] [5] |
+| **Honest degraded-state reporting** | The system surfaces imperfect runtime conditions explicitly rather than masking them behind false-green status.[9] [10] |
+
 ## How the System Operates
+
 
 At runtime, AEGX uses a straightforward loop. First, the state directory is initialized and the default policy is loaded. Second, `aegxd` starts and publishes an authenticated IPC surface plus a persisted status snapshot. Third, host or adapter workflows emit heartbeats and request status or active verification before risky actions. Fourth, guarded events are evaluated and recorded into the evidence store. Fifth, operators inspect status, prove output, or self-verification results; if the system reports degraded mode, they stop risky work, choose a safer workflow, or escalate. Finally, if an incident occurs, they export an evidence bundle and, where appropriate, roll back to a known-good snapshot.[1] [5] [6] [7] [8]
 
