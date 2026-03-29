@@ -359,67 +359,6 @@ The repository is now stronger in a way that is operationally meaningful. First,
 | **Degraded-state preservation** | Non-ideal verification states are logged and surfaced instead of causing opaque adapter failure.[3] [10] |
 | **Portable operator contract** | Teams can reproduce the same lifecycle across multiple agent environments.[2] [6] [7] [8] |
 
-## Agent-See Plugin Added to This Repository
-
-The repository now also contains an **optional Agent-See plugin** under `plugins/agent-see/`. This plugin is separate from the core AEGX runtime. Its purpose is not to harden the current repository itself, but to help an operator **convert external websites, SaaS products, or APIs into grounded agent bundles** that can then be used in Claude-style workspaces, Manus-style agent environments, OpenClaw-like orchestrators, or other agent harnesses.[11] [12] [13] [14] [15] [16]
-
-| Plugin path | Purpose | What it contains |
-|---|---|---|
-| `plugins/agent-see/.claude-plugin/plugin.json` | Claude-style plugin manifest | Plugin identity, version, description, repository link.[11] |
-| `plugins/agent-see/hooks/hooks.json` | Claude session-start hook registration | Runs a dependency check when the plugin session starts.[15] |
-| `plugins/agent-see/hooks/scripts/check-dependencies.sh` | Runtime dependency probe | Confirms whether `agent-see` and Python are available and prints next steps.[16] |
-| `plugins/agent-see/skills/convert-source` | Conversion workflow | Converts a website URL, SaaS URL, or OpenAPI spec into a grounded bundle.[13] |
-| `plugins/agent-see/skills/verify-bundle` | Quality review workflow | Checks coverage, fidelity, and hallucination risk for a converted bundle.[14] |
-| `plugins/agent-see/skills/launch-artifacts` | Public launch workflow | Generates discovery and trust artifacts such as `llms.txt` and an agents page.[17] |
-| `plugins/agent-see/skills/package-plugin` | Harness packaging workflow | Packages the converted bundle for Claude, Manus, OpenClaw, or generic harnesses.[18] |
-
-The Agent-See plugin should therefore be understood as an **adjacent productivity layer** in this repository. Provenable / AEGX continues to provide guardrails, daemon liveness, self-verification, evidence, and adapters for agent safety. Agent-See provides a separate path for **building agent-facing interfaces around outside business surfaces**.[1] [5] [12]
-
-## How Claude, Manus, and Other Agents Can Use the Agent-See Plugin
-
-The intended usage pattern is straightforward. First, the operator installs or makes available the `agent-see` CLI. Second, the agent uses the plugin’s skills to convert a source surface into a grounded bundle. Third, the agent verifies the bundle. Fourth, the agent optionally generates public launch artifacts. Finally, the agent packages the bundle for the destination harness.[12] [13] [14] [17] [18]
-
-| Harness | How to use the plugin from this repo | What the agent should rely on |
-|---|---|---|
-| **Claude Cowork / Claude Code** | Use the plugin directory `plugins/agent-see/` as the Claude plugin root or zip that directory into a distributable `.plugin` artifact. Claude-style environments expect `.claude-plugin/plugin.json`, `skills/*/SKILL.md`, optional hooks, and optionally `.mcp.json` if a runtime endpoint exists.[18] [19] | Claude should use the plugin skills to run conversion, verification, launch generation, and plugin packaging. The session-start hook only checks dependencies; it does not modify the Provenable runtime.[15] [16] |
-| **Manus** | Use the skill content under `plugins/agent-see/skills/` plus the generated bundle outputs such as `AGENTS.md`, MCP runtime metadata, and related plugin artifacts. Manus-style agents consume MCP tool surfaces directly and use skills as operational knowledge.[18] [19] | Manus should treat the plugin as an optional conversion-and-packaging layer, not as a replacement for AEGX protections. If a generated runtime is later deployed inside a guarded workflow, Provenable can still be used around that workflow.[5] [18] [19] |
-| **OpenClaw / related orchestrators** | Use Agent-See to generate the grounded bundle first, then register its agent card and connector outputs with the orchestrator. The plugin packaging skill explicitly supports OpenClaw-like targets.[18] [19] | OpenClaw-style environments should treat the plugin as a content and interface generator. Provenable remains the security and governance layer when operators want guarded installation, verification, snapshots, or evidence-backed incident response.[6] [18] |
-| **Generic harnesses** | Use the generated OpenAPI specification, AGENTS guidance, plugin manifest, and starter-kit outputs from the packaged bundle.[18] [19] | Any harness can consume the generated artifacts without requiring changes to the AEGX daemon or CLI unless the operator chooses to combine the two systems.[18] [19] |
-
-### Minimal Claude-style usage flow
-
-A Claude-style workspace can use the plugin by pointing the workspace to `plugins/agent-see/` and then triggering the packaged skills. The plugin manifest and hooks already exist in that directory, and the dependency hook will tell the operator whether `agent-see` still needs to be installed.[11] [15] [16]
-
-```bash
-cd plugins/agent-see
-pip install git+https://github.com/Danielfoojunwei/Convert-any-SaaS-application-into-an-Agentic-interface.git
-playwright install chromium
-```
-
-After that, a Claude-oriented workflow is conceptually: **convert**, **verify**, **launch**, and **package**.[12] [13] [14] [17] [18]
-
-### Minimal Manus-style usage flow
-
-In a Manus-style environment, the plugin is best used as a **preparation layer**. The operator or agent runs Agent-See to convert a URL or OpenAPI spec into a grounded bundle, then loads the generated `AGENTS.md`, MCP outputs, and related metadata into the Manus workflow. If the resulting workflow will later perform high-impact actions, Provenable can be wrapped around that runtime to add verification, snapshots, evidence export, and degraded-state reporting.[5] [18] [19]
-
-### Minimal generic workflow
-
-The generic workflow is the same across most harnesses: provide a source surface, generate the grounded bundle, verify the grounding quality, optionally publish discovery artifacts, and then package the result for the target runtime. That means the plugin is primarily useful for **creating and publishing agent interfaces**, whereas Provenable is primarily useful for **guarding and observing agent behavior during operation**.[5] [12] [13] [14] [17] [18]
-
-## Does the Agent-See Plugin Affect the Existing Provenable System?
-
-At present, the answer is **not by default**. Adding the plugin under `plugins/agent-see/` does **not** change the AEGX daemon, CLI, policies, adapters, or runtime behavior. The new plugin is a repository asset and documentation surface unless an operator explicitly chooses to install and run it.[4] [5] [11] [15] [16]
-
-| Question | Practical answer |
-|---|---|
-| **Does it change `aegx` or `aegxd`?** | No. The plugin does not alter the Rust runtime or daemon code paths.[5] |
-| **Does it change the shipped platform adapters?** | No. The existing Manus, Claude, and OpenClaw adapter scripts remain unchanged.[6] [7] [8] |
-| **Does it auto-run inside Provenable?** | No. The only automatic behavior defined by the plugin is its own Claude-oriented session-start dependency check when the plugin itself is loaded.[15] [16] |
-| **Does it change the current skill-bundle packaging flow?** | No. The current packaging script stages a fixed set of files and does not yet include `plugins/agent-see/`, so the existing Provenable bundle format remains unchanged unless that packaging workflow is deliberately extended later.[4] |
-| **Can it still be combined with Provenable?** | Yes. You can use Agent-See to generate or package an agent-facing interface and then use Provenable around that interface when you want runtime verification, evidence, snapshots, or guarded operations.[5] [12] [18] |
-
-This separation is actually useful. It keeps the current hardened runtime stable while letting the repository host an additional optional plugin for conversion and harness packaging work. In other words, **the plugin extends what the repository can help you build, but it does not silently change how the security runtime behaves**.[4] [5] [12]
-
 ## Validation Results and Current Caveats
 
 The final repository includes evidence for both packaging success and runtime behavior. The most recent bundle validation reports `overall_ok: true`, validates checksums and manifest schema, confirms the two CLIs are usable, verifies `aegxd` is present, and passes smoke tests for the OpenClaw, Manus, and Claude adapters from the packaged bundle.[9] The broader Phase 5 validation matrix also shows that active self-verification successfully exercised deny probes for control-plane, memory-write, message-input, file-read, network-egress, and sandbox-audit checks.[10]
@@ -462,7 +401,6 @@ For real use, treat AEGX as a control loop rather than a one-time installer. Sta
 | `integrations/manus` | Manus adapter workflow.[7] |
 | `integrations/claude-code` | Claude Cowork / Claude Code adapter workflow.[8] |
 | `packaging/skill` | Bundle creation and validation scripts.[4] [9] |
-| `plugins/agent-see` | Optional Agent-See plugin for converting external business surfaces into agent-ready bundles.[11] [12] |
 | `results` | Validation summaries and empirical output logs.[9] [10] |
 
 ## Additional Documentation
@@ -494,12 +432,3 @@ The source code in this repository is licensed under the MIT License. See [LICEN
 [8]: ./integrations/claude-code/claude_code_adapter.sh "Claude Code Adapter"
 [9]: ./results/skill_bundle_validation_latest.json "Latest Skill Bundle Validation Summary"
 [10]: ./results/phase5_validation_matrix.log "Phase 5 Validation Matrix"
-[11]: ./plugins/agent-see/.claude-plugin/plugin.json "Agent-See Claude Plugin Manifest"
-[12]: ./plugins/agent-see/README.md "Agent-See Plugin README"
-[13]: ./plugins/agent-see/skills/convert-source/SKILL.md "Agent-See Convert Source Skill"
-[14]: ./plugins/agent-see/skills/verify-bundle/SKILL.md "Agent-See Verify Bundle Skill"
-[15]: ./plugins/agent-see/hooks/hooks.json "Agent-See Hook Registration"
-[16]: ./plugins/agent-see/hooks/scripts/check-dependencies.sh "Agent-See Dependency Check Hook"
-[17]: ./plugins/agent-see/skills/launch-artifacts/SKILL.md "Agent-See Launch Artifacts Skill"
-[18]: ./plugins/agent-see/skills/package-plugin/SKILL.md "Agent-See Package Plugin Skill"
-[19]: ./plugins/agent-see/skills/package-plugin/references/harness-guides.md "Agent-See Harness Guides"
