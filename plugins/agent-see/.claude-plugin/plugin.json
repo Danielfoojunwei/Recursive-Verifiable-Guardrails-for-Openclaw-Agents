@@ -1,0 +1,11 @@
+{
+  "name": "agent-see",
+  "version": "0.1.0",
+  "description": "Convert any website, SaaS product, or API into a plugin-ready agentic interface using the Agent-See pipeline",
+  "author": {
+    "name": "Danielfoojunwei"
+  },
+  "repository": "https://github.com/Danielfoojunwei/Convert-any-SaaS-application-into-an-Agentic-interface",
+  "license": "MIT",
+  "keywords": ["agent-see", "saas", "conversion", "plugin-builder", "agentic", "mcp"]
+}
